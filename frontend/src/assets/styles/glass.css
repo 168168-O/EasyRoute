@@ -3,8 +3,8 @@
   --wave-rgb: 24, 140, 255;
   --wave-2-rgb: 80, 215, 255;
   --cyan-rgb: 120, 230, 255;
-  --gold: #e8c77a;
-  --gold-rgb: 232, 199, 122;
+  --gold: var(--accent, #e8c77a);
+  --gold-rgb: var(--accent-rgb, 232, 199, 122);
   --green-rgb: 52, 199, 120;
   --purple-rgb: 140, 92, 255;
   --blue-rgb: 40, 130, 255;
@@ -148,9 +148,14 @@ body {
   place-items: center;
   font-size: 14px;
   font-weight: 800;
-  color: #1a1408;
-  background: linear-gradient(135deg, #f6e3b0, var(--gold) 50%, #b98e3e);
-  box-shadow: 0 0 14px rgba(var(--gold-rgb), 0.55);
+  color: var(--on-accent, #1a1408);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 40%, #fff),
+    var(--accent) 55%,
+    color-mix(in srgb, var(--accent) 70%, #000)
+  );
+  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.55);
 }
 
 #app .main-nav {
@@ -172,11 +177,11 @@ body {
 }
 
 #app .main-nav__button.is-active {
-  color: #ffe39a !important;
-  background: rgba(var(--gold-rgb), 0.16) !important;
+  color: var(--accent) !important;
+  background: rgba(var(--accent-rgb), 0.16) !important;
   box-shadow:
-    inset 0 0 0 1.5px rgba(255, 226, 150, 0.9),
-    0 0 22px rgba(var(--gold-rgb), 0.6);
+    inset 0 0 0 1.5px rgba(var(--accent-rgb), 0.9),
+    0 0 22px rgba(var(--accent-rgb), 0.6);
 }
 
 #app .nav-ico {
@@ -228,8 +233,8 @@ body {
   padding: 3px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.07));
   box-shadow:
-    0 0 0 1.6px #f4d584,
-    0 0 14px rgba(255, 214, 120, 0.75),
+    0 0 0 1.6px var(--accent),
+    0 0 14px rgba(var(--accent-rgb), 0.75),
     inset 0 1px 0 rgba(255, 255, 255, 0.45);
   overflow: hidden;
 }
@@ -260,10 +265,15 @@ body {
 }
 
 #app .gui-radio.tone-gold .gui-radio-button.active {
-  color: #3a2604 !important;
+  color: var(--on-accent) !important;
   text-shadow: none;
-  background: linear-gradient(180deg, #fff3c4 0%, #ffd36b 45%, #e3a332 100%) !important;
-  box-shadow: 0 0 10px #ffd36b, 0 0 26px rgba(255, 200, 80, 0.8);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 35%, #fff) 0%,
+    var(--accent) 45%,
+    color-mix(in srgb, var(--accent) 72%, #000) 100%
+  ) !important;
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.95), 0 0 26px rgba(var(--accent-rgb), 0.7);
 }
 
 #app .gui-switch {
@@ -335,7 +345,7 @@ body[theme-mode='light'] #app .main-nav__button.is-active {
 }
 
 body[theme-mode='light'] #app .gui-radio.tone-gold .gui-radio-button.active {
-  color: #3a2604 !important;
+  color: var(--on-accent) !important;
 }
 
 /* Theme strip */
@@ -346,7 +356,7 @@ body[theme-mode='light'] #app .gui-radio.tone-gold .gui-radio-button.active {
   border-radius: 999px;
   padding: 3px;
   background: rgba(10, 40, 100, 0.35);
-  box-shadow: 0 0 0 1.6px #f4d584, 0 0 16px rgba(255, 214, 120, 0.7);
+  box-shadow: 0 0 0 1.6px var(--accent), 0 0 16px rgba(var(--accent-rgb), 0.7);
   pointer-events: auto;
 }
 
@@ -414,8 +424,8 @@ html[data-font='xlarge'] .themes .t { border-radius: 999px; }
   place-items: center;
   font-size: 12px;
   font-weight: 800;
-  color: #2a1d06;
-  background: linear-gradient(180deg, #fbe7b2, #d4a650);
+  color: var(--on-accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 40%, #fff), var(--accent));
 }
 .status {
   font-size: 13px;
@@ -439,13 +449,18 @@ html[data-font='xlarge'] .themes .t { border-radius: 999px; }
 }
 .btn.add, .pill-btn {
   cursor: pointer;
-  color: #3a2604;
+  color: var(--on-accent);
   font-weight: 700;
   border: 0;
   border-radius: 999px;
   padding: 8px 16px;
-  background: linear-gradient(180deg, #fff3c4, #ffd36b 45%, #e3a332);
-  box-shadow: 0 0 12px rgba(255, 200, 80, 0.7);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 35%, #fff),
+    var(--accent) 45%,
+    color-mix(in srgb, var(--accent) 72%, #000)
+  );
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.7);
 }
 .ghost-btn {
   cursor: pointer;
@@ -537,7 +552,15 @@ body[theme-mode='light'] .note b {
 }
 
 /* 翻译 */
-.tr-page { display: flex; flex-direction: column; min-height: 0; }
+.tr-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  container-type: inline-size;
+}
 .tr-target { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 14px; }
 .tr-select, .tr-box {
   color: #fff;
@@ -555,30 +578,57 @@ body[theme-mode='light'] .note b {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 12px;
   align-items: stretch;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
-.tr-pane { display: flex; flex-direction: column; gap: 6px; min-width: 0; color: var(--text-2); font-size: 13px; }
+.tr-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--text-2);
+  font-size: 13px;
+}
 .tr-pane em { margin-left: 8px; font-style: normal; color: #d7ecff; }
 .tr-box {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 220px;
+  box-sizing: border-box;
   resize: vertical;
   border-radius: 18px;
   padding: 14px 16px;
   font: inherit;
   line-height: 1.55;
   outline: none;
+  overflow-wrap: anywhere;
 }
 .tr-swap {
   align-self: center;
+  justify-self: center;
   width: 42px;
   height: 42px;
   border: 0;
   border-radius: 999px;
   cursor: pointer;
-  color: #3a2604;
+  color: var(--on-accent);
   font-size: 20px;
-  background: linear-gradient(180deg, #fff3c4, #ffd36b 45%, #e3a332);
-  box-shadow: 0 0 12px rgba(255, 200, 80, 0.7);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 35%, #fff),
+    var(--accent) 45%,
+    color-mix(in srgb, var(--accent) 72%, #000)
+  );
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.7);
+}
+@media (max-width: 860px) {
+  .tr-panes { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 720px) {
+  .tr-panes { grid-template-columns: minmax(0, 1fr); }
 }
 .tr-actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .tr-go { min-width: 120px; font-size: 16px; padding: 10px 22px; }

@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { BackgroundVideoURL, WindowIsMinimised } from '@/bridge'
 import { useAppSettingsStore } from '@/stores'
-import { previewVideoURL } from '@/utils/backgroundVideo'
+import { backgroundVideoNonce, previewVideoURL } from '@/utils/backgroundVideo'
 
 const appSettings = useAppSettingsStore()
 const canvas = ref<HTMLCanvasElement>()
@@ -19,7 +19,14 @@ const showVideo = computed(
 const videoSrc = computed(() => {
   if (previewVideoURL.value) return previewVideoURL.value
   if (!appSettings.app.backgroundVideo || !remoteURL.value) return ''
-  return remoteURL.value + '?v=' + encodeURIComponent(appSettings.app.backgroundVideo)
+  const nonce = backgroundVideoNonce.value
+  return (
+    remoteURL.value +
+    '?v=' +
+    encodeURIComponent(appSettings.app.backgroundVideo) +
+    '&n=' +
+    nonce
+  )
 })
 
 let timer = 0
@@ -160,7 +167,7 @@ watch(
 )
 
 watch(showVideo, () => syncPlayback())
-watch(previewVideoURL, () => {
+watch([previewVideoURL, backgroundVideoNonce, () => appSettings.app.backgroundVideo], () => {
   videoBroken.value = false
 })
 </script>
@@ -176,6 +183,7 @@ watch(previewVideoURL, () => {
       muted
       loop
       playsinline
+      :key="videoSrc"
       :src="videoSrc"
       style="pointer-events: none"
       @error="videoBroken = true"

@@ -200,6 +200,7 @@ type translateEngine struct {
 	mu        sync.Mutex
 	direct    *http.Client
 	proxy     *http.Client
+	core      *http.Client
 	bingPages []string
 	googleURL string
 	creds     bingCreds
@@ -218,6 +219,20 @@ func directTranslateClient() *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	// Ignore HTTP_PROXY / the system proxy. Translation must leave the machine directly.
 	transport.Proxy = func(*http.Request) (*url.URL, error) { return nil, nil }
+	return &http.Client{Transport: transport, Timeout: 12 * time.Second}
+}
+
+func explicitProxyClient(proxyURL string) *http.Client {
+	proxyURL = strings.TrimSpace(proxyURL)
+	if proxyURL == "" {
+		return nil
+	}
+	parsed, err := url.Parse(proxyURL)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return nil
+	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = http.ProxyURL(parsed)
 	return &http.Client{Transport: transport, Timeout: 12 * time.Second}
 }
 
@@ -427,28 +442,46 @@ func (e *translateEngine) translateGoogle(text, from, to string) (TranslateResul
 		source = "auto"
 	}
 	endpoint := e.googleURL + "?client=gtx&sl=" + url.QueryEscape(googleLang(source)) + "&tl=" + url.QueryEscape(googleLang(to)) + "&dt=t"
-	status, body, err := e.do(http.MethodPost, endpoint, form.Encode(), map[string]string{
+	headers := map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
-	})
-	if err != nil {
-		return TranslateResult{}, errTranslateDown
 	}
-	if status != http.StatusOK {
-		return TranslateResult{}, errTranslateBad
+	// Google is blocked on a direct mainland path. Prefer the running sing-box
+	// mixed/http inbound, then try direct. Bing does not use this client.
+	clients := make([]*http.Client, 0, 2)
+	if e.core != nil {
+		clients = append(clients, e.core)
 	}
-	translated, err := parseGoogleTranslations(body)
-	if err != nil {
-		return TranslateResult{}, errTranslateBad
+	if e.direct != nil {
+		clients = append(clients, e.direct)
 	}
-	if source == "auto" {
-		source = ""
+	var last error = errTranslateDown
+	for _, client := range clients {
+		status, body, _, err := e.doClient(client, http.MethodPost, endpoint, form.Encode(), headers)
+		if err != nil || status >= 500 {
+			last = errTranslateDown
+			continue
+		}
+		if status != http.StatusOK {
+			last = errTranslateBad
+			continue
+		}
+		translated, err := parseGoogleTranslations(body)
+		if err != nil {
+			last = errTranslateBad
+			continue
+		}
+		detected := source
+		if detected == "auto" {
+			detected = ""
+		}
+		return TranslateResult{
+			Text:       translated,
+			SourceLang: detected,
+			TargetLang: to,
+			Provider:   "google",
+		}, nil
 	}
-	return TranslateResult{
-		Text:       translated,
-		SourceLang: source,
-		TargetLang: to,
-		Provider:   "google",
-	}, nil
+	return TranslateResult{}, last
 }
 
 func (e *translateEngine) Translate(text, target string) (TranslateResult, error) {
@@ -477,8 +510,9 @@ func (e *translateEngine) Translate(text, target string) (TranslateResult, error
 var sharedTranslate = newTranslateEngine(nil, nil)
 
 // Translate asks Bing's public translator directly, then Google if Bing fails.
-// The first attempt never uses a proxy. A proxy is used only when the direct attempt fails.
-func (a *App) Translate(text string, target string) FlagResult {
+// Bing stays direct (a system proxy is used only when the direct attempt cannot connect).
+// coreProxy is the running sing-box mixed/http inbound, used only for the Google fallback.
+func (a *App) Translate(text string, target string, coreProxy string) FlagResult {
 	proxyURL := ""
 	if got := a.GetSystemProxy(); got.Flag {
 		proxyURL = got.Data
@@ -488,6 +522,7 @@ func (a *App) Translate(text string, target string) FlagResult {
 		sharedTranslate.direct = directTranslateClient()
 	}
 	sharedTranslate.proxy = proxyTranslateClient(proxyURL)
+	sharedTranslate.core = explicitProxyClient(coreProxy)
 	sharedTranslate.mu.Unlock()
 	result, err := sharedTranslate.Translate(text, target)
 	if err != nil {

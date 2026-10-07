@@ -95,6 +95,7 @@ declare namespace App {
     systemProxyDNS: string
     systemDefaultDNS: string
     autoStartKernel: boolean
+    preferRunAsAdmin: boolean
     autoRestartKernel: boolean
     userAgent: string
     startupDelay: number

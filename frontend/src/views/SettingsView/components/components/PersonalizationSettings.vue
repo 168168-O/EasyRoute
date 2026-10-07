@@ -7,7 +7,7 @@ import { Color } from '@/enums/app'
 import routes from '@/router/routes'
 import { useAppSettingsStore, useAppStore } from '@/stores'
 import { APP_LOCALES_URL, message } from '@/utils'
-import { previewVideoURL } from '@/utils/backgroundVideo'
+import { bumpBackgroundVideo, previewVideoURL } from '@/utils/backgroundVideo'
 
 const palettes = [
   { id: 'gold-sea', name: '鎏金深海', rgb: '212,178,106' },
@@ -67,6 +67,7 @@ const resetBackground = () => {
   appSettings.app.backgroundVideo = ''
   if (previewVideoURL.value) URL.revokeObjectURL(previewVideoURL.value)
   previewVideoURL.value = ''
+  bumpBackgroundVideo()
 }
 
 const storePickedVideo = async (path: string) => {
@@ -78,6 +79,7 @@ const storePickedVideo = async (path: string) => {
   if (previewVideoURL.value) URL.revokeObjectURL(previewVideoURL.value)
   previewVideoURL.value = ''
   appSettings.app.backgroundVideo = dest
+  bumpBackgroundVideo()
 }
 
 const chooseVideo = async () => {
@@ -99,6 +101,7 @@ const onVideoFile = (event: Event) => {
   if (previewVideoURL.value) URL.revokeObjectURL(previewVideoURL.value)
   previewVideoURL.value = URL.createObjectURL(file)
   appSettings.app.backgroundVideo = file.name
+  bumpBackgroundVideo()
 }
 </script>
 <template>

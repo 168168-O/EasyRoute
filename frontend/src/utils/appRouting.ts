@@ -165,6 +165,16 @@ const findProxyOutbound = (config: Record<string, any>, explicit?: string) => {
   const rules = (config.route?.rules || []) as Record<string, any>[]
   const globalRule = rules.find((rule) => rule.clash_mode === 'global' && rule.outbound)
   if (globalRule?.outbound && globalRule.outbound !== 'direct') return String(globalRule.outbound)
+  // After the first apply, clash global is retargeted to direct. The proxy
+  // process rule still names the outbound, so a second apply stays stable.
+  const processRule = rules.find(
+    (rule) =>
+      rule.action === 'route' &&
+      rule.outbound &&
+      rule.outbound !== 'direct' &&
+      (rule.process_name || rule.process_path),
+  )
+  if (processRule?.outbound) return String(processRule.outbound)
   const selector = ((config.outbounds || []) as Record<string, any>[]).find(
     (outbound) => outbound.type === 'selector' && outbound.tag && outbound.tag !== 'GLOBAL',
   )
@@ -223,9 +233,54 @@ const findRemoteDns = (config: Record<string, any>) => {
   const globalRule = rules.find((rule) => rule.clash_mode === 'global' && rule.server)
   if (globalRule?.server && globalRule.server !== LOCAL_DNS_TAG) return String(globalRule.server)
   const remote = ((config.dns?.servers || []) as Record<string, any>[]).find(
-    (server) => server.tag && server.tag !== LOCAL_DNS_TAG && (server.detour || /remote/i.test(String(server.tag))),
+    (server) =>
+      server.tag &&
+      server.tag !== LOCAL_DNS_TAG &&
+      server.type !== 'fakeip' &&
+      (server.detour || /remote/i.test(String(server.tag))),
   )
   return remote?.tag ? String(remote.tag) : undefined
+}
+
+const findFakeIpDns = (config: Record<string, any>) => {
+  const fake = ((config.dns?.servers || []) as Record<string, any>[]).find(
+    (server) => server.type === 'fakeip' && server.tag,
+  )
+  return fake?.tag ? String(fake.tag) : undefined
+}
+
+/** CN geosite tags such as geosite-cn / GeoSite-CN. Skips geolocation-!cn. */
+const isCnGeosite = (tag: string) => {
+  const value = tag.toLowerCase()
+  if (!value || value.includes('!')) return false
+  if (!/geo[-_]?site/.test(value)) return false
+  return /(^|[^a-z])cn([^a-z]|$)/.test(value)
+}
+
+const collectCnGeositeTags = (config: Record<string, any>) => {
+  const tags: string[] = []
+  const push = (value: unknown) => {
+    for (const tag of asList(value)) {
+      if (!isCnGeosite(tag)) continue
+      if (tags.some((item) => lower(item) === lower(tag))) continue
+      tags.push(tag)
+    }
+  }
+  const rules = [
+    ...((config.dns?.rules || []) as Record<string, any>[]),
+    ...((config.route?.rules || []) as Record<string, any>[]),
+  ]
+  for (const rule of rules) {
+    if (rule && typeof rule === 'object') push(rule.rule_set)
+  }
+  const sets = config.route?.rule_set
+  if (Array.isArray(sets)) {
+    for (const set of sets) {
+      if (typeof set === 'string') push(set)
+      else if (set && typeof set === 'object') push(set.tag)
+    }
+  }
+  return tags
 }
 
 const buildPrefix = (
@@ -239,6 +294,12 @@ const buildPrefix = (
   const proxyExes = unique(
     programs
       .filter((program) => program.mode === 'proxy' && program.exe && !isPinnedExe(program.exe))
+      .map((program) => program.exe)
+      .filter((exe) => !pinnedSet.has(lower(exe))),
+  )
+  const directExes = unique(
+    programs
+      .filter((program) => program.mode === 'direct' && program.exe && !isPinnedExe(program.exe))
       .map((program) => program.exe)
       .filter((exe) => !pinnedSet.has(lower(exe))),
   )
@@ -276,7 +337,7 @@ const buildPrefix = (
     outbound: directOutbound,
   })
 
-  return { rules, proxyExes, douyinNames, wechat }
+  return { rules, proxyExes, directExes, douyinNames, wechat }
 }
 
 const stripInjected = (existing: Record<string, unknown>[], injected: Record<string, unknown>[]) => {
@@ -285,8 +346,8 @@ const stripInjected = (existing: Record<string, unknown>[], injected: Record<str
 }
 
 /**
- * Prepend safety and per-app rules, enable TUN + find_process, and point
- * direct programs at a local DNS server. Safe to call more than once.
+ * Prepend safety and per-app rules, enable TUN + find_process, and split DNS.
+ * Unidentified connections use the direct outbound. Safe to call more than once.
  */
 export const applyAppRouting = (config: Record<string, any>, options: AppRoutingOptions = {}) => {
   const programs = options.programs || []
@@ -295,7 +356,7 @@ export const applyAppRouting = (config: Record<string, any>, options: AppRouting
   ensureDirectOutbound(config, directOutbound)
   ensureTun(config)
 
-  const { rules: prefix, proxyExes } = buildPrefix(
+  const { rules: prefix, proxyExes, directExes } = buildPrefix(
     programs,
     options.extraDirectExes || [],
     proxyOutbound,
@@ -304,12 +365,32 @@ export const applyAppRouting = (config: Record<string, any>, options: AppRouting
 
   const route = (config.route = config.route || {})
   const existing = (Array.isArray(route.rules) ? route.rules : []) as Record<string, unknown>[]
-  route.rules = [...prefix, ...stripInjected(existing, prefix)]
+  const merged = [...prefix, ...stripInjected(existing, prefix)]
+  // Connections with no process path skip every process rule and would otherwise
+  // hit clash_mode global → proxy. Send those to direct. Named 走代理 processes
+  // still match their earlier process rule.
+  route.rules = merged.map((rule) => {
+    if (rule?.clash_mode === 'global' && rule.outbound && rule.outbound !== directOutbound) {
+      return { ...rule, outbound: directOutbound }
+    }
+    return rule
+  })
+  route.final = directOutbound
   route.find_process = true
   route.default_domain_resolver = { server: ensureLocalDns(config) }
 
   const localDns = LOCAL_DNS_TAG
   const remoteDns = findRemoteDns(config)
+  const fakeIpDns = findFakeIpDns(config)
+  const cnTags = collectCnGeositeTags(config)
+  const dnsRulesBefore = (Array.isArray(config.dns?.rules) ? config.dns.rules : []) as Record<string, any>[]
+  const localServerFor = (tag: string) => {
+    const current = dnsRulesBefore.find((rule) => asList(rule.rule_set).some((item) => lower(item) === lower(tag)))
+    const server = current?.server ? String(current.server) : ''
+    if (server && server !== remoteDns && server !== fakeIpDns) return server
+    return localDns
+  }
+
   const dnsPrefix: Record<string, unknown>[] = [
     { action: 'route', domain_suffix: [...SAFETY_DOMAIN_SUFFIXES], server: localDns },
     {
@@ -318,18 +399,23 @@ export const applyAppRouting = (config: Record<string, any>, options: AppRouting
       server: localDns,
     },
   ]
-  if (proxyExes.length && remoteDns) {
-    dnsPrefix.push({ action: 'route', process_name: proxyExes, server: remoteDns })
+  if (directExes.length) {
+    dnsPrefix.push({ action: 'route', process_name: directExes, server: localDns })
   }
-  dnsPrefix.push({
-    action: 'route',
-    process_path_regex: DIRECT_PROCESS_CATCHALL,
-    server: localDns,
-  })
+  for (const tag of cnTags) {
+    dnsPrefix.push({ action: 'route', rule_set: tag, server: localServerFor(tag) })
+  }
+  if (proxyExes.length) {
+    const server = fakeIpDns || remoteDns
+    if (server) dnsPrefix.push({ action: 'route', process_name: proxyExes, server })
+  }
 
   const dns = (config.dns = config.dns || {})
   const dnsRules = (Array.isArray(dns.rules) ? dns.rules : []) as Record<string, unknown>[]
   dns.rules = [...dnsPrefix, ...stripInjected(dnsRules, dnsPrefix)]
+  // Leftover queries (Windows system DNS, non-CN) use the remote resolver.
+  // CN, safety domains, WeChat/Douyin and explicit 走本地 processes already matched above.
+  if (remoteDns) dns.final = remoteDns
 
   return config
 }

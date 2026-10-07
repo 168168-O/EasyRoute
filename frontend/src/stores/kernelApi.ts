@@ -14,7 +14,7 @@ import {
   destroyWebsocket,
   probeApiAvailability,
 } from '@/api/kernel'
-import { ProcessInfo, KillProcess, ExecBackground, ReadFile, RemoveFile } from '@/bridge'
+import { ExitApp, ProcessInfo, KillProcess, ExecBackground, ReadFile, RemoveFile } from '@/bridge'
 import {
   CoreConfigFilePath,
   CoreLogFilePath,
@@ -22,7 +22,7 @@ import {
   CoreWorkingDirectory,
 } from '@/constant/kernel'
 import { DefaultInboundMixed } from '@/constant/profile'
-import { Branch } from '@/enums/app'
+import { Branch, OS } from '@/enums/app'
 import { Inbound, RulesetType, TunStack } from '@/enums/kernel'
 import {
   useAppSettingsStore,
@@ -41,6 +41,8 @@ import {
   restoreProfile,
   deepClone,
   message,
+  confirm,
+  RunWithPowerShell,
   getKernelRuntimeArgs,
   getKernelRuntimeEnv,
   eventBus,
@@ -350,7 +352,23 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     coreStoppedResolver(null)
   }
 
+  const ensureElevatedForTun = async () => {
+    if (envStore.env.os !== OS.Windows || envStore.env.isPrivileged) return 'ok' as const
+    const restart = await confirm('settings.tunAdminTitle', 'settings.tunAdminBody', {
+      type: 'text',
+      okText: 'settings.tunAdminOk',
+      cancelText: 'common.cancel',
+    }).catch(() => false)
+    if (restart) {
+      await RunWithPowerShell(envStore.env.appPath, [], { admin: true, wait: false })
+      await ExitApp()
+      return 'leaving' as const
+    }
+    throw 'settings.tunAdminCancelled'
+  }
+
   const startCore = async (_profile?: App.Profile) => {
+    if ((await ensureElevatedForTun()) === 'leaving') return
     if (running.value) throw 'The core is already running'
 
     logsStore.clearKernelLog()
@@ -390,6 +408,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
   }
 
   const restartCore = async (cleanupTask?: () => Promise<any>, keepRuntimeProfile = false) => {
+    if ((await ensureElevatedForTun()) === 'leaving') return
     restarting.value = true
     try {
       await stopCore()

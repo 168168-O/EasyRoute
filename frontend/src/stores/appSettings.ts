@@ -82,6 +82,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     systemProxyDNS: '',
     systemDefaultDNS: '',
     autoStartKernel: false,
+    preferRunAsAdmin: true,
     autoRestartKernel: false,
     userAgent: '',
     startupDelay: 30,
@@ -162,6 +163,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     }
     if (settings.autoSetSystemDNS === undefined) {
       settings.autoSetSystemDNS = false
+    }
+    // New installs (no user.yaml) default to running as admin because TUN needs it.
+    // An existing file that never stored the choice stays off so a user who turned
+    // the switch off is not switched back on.
+    if (!data) {
+      settings.preferRunAsAdmin = true
+    } else if (settings.preferRunAsAdmin === undefined) {
+      settings.preferRunAsAdmin = false
     }
     if (settings.systemProxyDNS === undefined) {
       settings.systemProxyDNS = ''

@@ -97,8 +97,8 @@ export const BackgroundVideoURL = async () => {
   return data as string
 }
 
-export const Translate = async (text: string, target: string) => {
-  const { flag, data } = await Bridge.Translate(text, target)
+export const Translate = async (text: string, target: string, coreProxy = '') => {
+  const { flag, data } = await Bridge.Translate(text, target, coreProxy)
   if (!flag) throw data
   return JSON.parse(data) as {
     text: string
