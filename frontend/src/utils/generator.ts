@@ -14,6 +14,7 @@ import {
 } from '@/enums/kernel'
 import {
   useAppSettingsStore,
+  useEnvStore,
   usePluginsStore,
   useRulesetsStore,
   useSubscribesStore,
@@ -521,10 +522,12 @@ const readDouyinExes = async () => {
 
 export const applyRoutingToConfig = async (config: Recordable) => {
   const appSettings = useAppSettingsStore()
+  const envStore = useEnvStore()
   const programs = (appSettings.app.appPrograms || []) as RoutedProgram[]
   return applyAppRouting(config, {
     programs,
     extraDirectExes: await readDouyinExes(),
+    appPath: envStore.env.appPath,
   })
 }
 
