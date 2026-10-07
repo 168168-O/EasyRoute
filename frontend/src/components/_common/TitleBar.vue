@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 
-import logo from '@/assets/logo'
 import {
   WindowSetAlwaysOnTop,
   WindowHide,
@@ -75,7 +74,7 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
     class="app-titlebar flex items-center py-8 gap-8 px-12"
     style="--wails-draggable: drag"
   >
-    <img v-if="!isDarwin" class="app-titlebar__logo w-24 h-24" draggable="false" :src="logo" />
+    <div v-if="!isDarwin" class="brand-mark" aria-hidden="true">达</div>
 
     <div
       :class="isDarwin ? 'justify-center py-4 text-12' : 'text-14'"

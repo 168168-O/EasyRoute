@@ -81,6 +81,7 @@ defineExpose({
   <div class="flex flex-col items-center py-12">
     <img :src="logo" class="w-64" draggable="false" />
     <div class="py-8 font-bold">{{ APP_TITLE }}</div>
+    <div class="text-12 pb-8">{{ t('about.credit') }}</div>
     <div class="flex items-center">
       <Button
         v-if="appStore.restartable"

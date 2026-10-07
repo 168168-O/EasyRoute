@@ -1,3 +1,4 @@
+import './previewBridge'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 

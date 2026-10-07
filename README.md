@@ -1,3 +1,9 @@
+# 达货爱vpn姑娘
+
+Based on GUI.for.SingBox (GPL-3.0).
+
+Windows 图形界面：导入订阅后连接，再按软件选择走代理或走本地。本仓库保留上游版权与 GPL-3.0，产品名称是「达货爱vpn姑娘」。
+
 ## Preview
 
 Take a look at the live version here: 👉 <a href="https://gui-for-cores.github.io/guide/gfs/" target="_blank">Live Demo</a>
@@ -25,9 +31,9 @@ Take a look at the live version here: 👉 <a href="https://gui-for-cores.github
 2、Pull and Build
 
 ```bash
-git clone https://github.com/GUI-for-Cores/GUI.for.SingBox.git
+git clone https://github.com/168168-O/EasyRoute.git
 
-cd GUI.for.SingBox/frontend
+cd EasyRoute/frontend
 
 pnpm install --frozen-lockfile && pnpm build
 

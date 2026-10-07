@@ -14,7 +14,7 @@ const messages: Recordable = {
 
 const i18n = createI18n({
   legacy: false,
-  locale: 'en',
+  locale: 'zh',
   fallbackWarn: false,
   missingWarn: false,
   messages,

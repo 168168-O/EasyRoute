@@ -1,5 +1,6 @@
 import type { Plugin, App, Component } from 'vue'
 
+export { default as BackgroundLayer } from './_common/BackgroundLayer.vue'
 export { default as TitleBar } from './_common/TitleBar.vue'
 export { default as NavigationBar } from './_common/NavigationBar.vue'
 export { default as SplashView } from './_common/SplashView.vue'

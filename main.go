@@ -33,7 +33,7 @@ func main() {
 		MinHeight:        400,
 		DisableResize:    false,
 		Menu:             app.AppMenu,
-		Title:            bridge.Env.AppName,
+		Title:            "达货爱vpn姑娘",
 		Frameless:        bridge.Env.OS != "darwin",
 		Width:            bridge.Config.Width,
 		Height:           bridge.Config.Height,
@@ -55,7 +55,7 @@ func main() {
 			WindowIsTranslucent:  true,
 			About: &mac.AboutInfo{
 				Title:   bridge.Env.AppName,
-				Message: "© 2026 GUI.for.Cores",
+				Message: "© 2026 GUI.for.Cores\nBased on GUI.for.SingBox (GPL-3.0)",
 				Icon:    icon,
 			},
 		},

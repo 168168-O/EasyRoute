@@ -1,0 +1,78 @@
+/* 达货爱姑娘 — 主题变量（可直接迁移到 Vue 的全局样式）
+ * 用法：<html data-theme="gold-sea">；切换主题只改 data-theme 属性。
+ * --accent      主强调色（选中态、开关、高亮）
+ * --accent-2    辅助色（次级高亮、光轨第二色）
+ * --bg-0/1/2    背景深浅三档（最底层渐变）
+ * --*-rgb       同色的 RGB 三元组，用于 rgba(var(--accent-rgb), .3) 这类透明度写法
+ */
+:root,
+[data-theme='gold-sea'] { /* 鎏金深海（默认） */
+  --theme-name: '鎏金深海';
+  --accent: #D4B26A;  --accent-rgb: 212, 178, 106;
+  --accent-2: #8FD3FF; --accent-2-rgb: 143, 211, 255;
+  --bg-0: #050B16; --bg-1: #0A1628; --bg-2: #12243F;
+  --on-accent: #1A1408;
+}
+[data-theme='glacier-aurora'] { /* 冰川极光 */
+  --theme-name: '冰川极光';
+  --accent: #7FE3D4;  --accent-rgb: 127, 227, 212;
+  --accent-2: #9DB8FF; --accent-2-rgb: 157, 184, 255;
+  --bg-0: #041116; --bg-1: #08202A; --bg-2: #0E3240;
+  --on-accent: #062420;
+}
+[data-theme='jade-celadon'] { /* 墨玉青瓷 */
+  --theme-name: '墨玉青瓷';
+  --accent: #8CC7B0;  --accent-rgb: 140, 199, 176;
+  --accent-2: #E6D3A3; --accent-2-rgb: 230, 211, 163;
+  --bg-0: #06110E; --bg-1: #0C1D18; --bg-2: #152D26;
+  --on-accent: #0B231B;
+}
+[data-theme='night-amethyst'] { /* 暗夜紫晶 */
+  --theme-name: '暗夜紫晶';
+  --accent: #B69CFF;  --accent-rgb: 182, 156, 255;
+  --accent-2: #F0B8E8; --accent-2-rgb: 240, 184, 232;
+  --bg-0: #0A0616; --bg-1: #150D2A; --bg-2: #23163F;
+  --on-accent: #1C1238;
+}
+[data-theme='rose-champagne'] { /* 玫瑰香槟 */
+  --theme-name: '玫瑰香槟';
+  --accent: #E8B4A0;  --accent-rgb: 232, 180, 160;
+  --accent-2: #F5D7A1; --accent-2-rgb: 245, 215, 161;
+  --bg-0: #12090C; --bg-1: #1F1016; --bg-2: #301A22;
+  --on-accent: #2A1510;
+}
+[data-theme='obsidian-gold'] { /* 曜石黑金 */
+  --theme-name: '曜石黑金';
+  --accent: #E3C27A;  --accent-rgb: 227, 194, 122;
+  --accent-2: #B8B8B8; --accent-2-rgb: 184, 184, 184;
+  --bg-0: #050505; --bg-1: #0D0D0F; --bg-2: #1A1A1D;
+  --on-accent: #1A1406;
+}
+[data-theme='rime-silver'] { /* 雾凇银灰 */
+  --theme-name: '雾凇银灰';
+  --accent: #C9D3DE;  --accent-rgb: 201, 211, 222;
+  --accent-2: #8FB3C9; --accent-2-rgb: 143, 179, 201;
+  --bg-0: #0B0E12; --bg-1: #14191F; --bg-2: #202831;
+  --on-accent: #151A20;
+}
+[data-theme='amber-dusk'] { /* 琥珀暮光 */
+  --theme-name: '琥珀暮光';
+  --accent: #F2A65A;  --accent-rgb: 242, 166, 90;
+  --accent-2: #FF8A7A; --accent-2-rgb: 255, 138, 122;
+  --bg-0: #110805; --bg-1: #1E0F09; --bg-2: #301A10;
+  --on-accent: #2A1504;
+}
+[data-theme='emerald-forest'] { /* 翡翠森林 */
+  --theme-name: '翡翠森林';
+  --accent: #5FD39A;  --accent-rgb: 95, 211, 154;
+  --accent-2: #C9E58A; --accent-2-rgb: 201, 229, 138;
+  --bg-0: #03100A; --bg-1: #081C12; --bg-2: #102D1E;
+  --on-accent: #052014;
+}
+[data-theme='galaxy-blues'] { /* 星河蓝调 */
+  --theme-name: '星河蓝调';
+  --accent: #7AA8FF;  --accent-rgb: 122, 168, 255;
+  --accent-2: #C3A6FF; --accent-2-rgb: 195, 166, 255;
+  --bg-0: #050818; --bg-1: #0A1030; --bg-2: #141C4A;
+  --on-accent: #0A1430;
+}

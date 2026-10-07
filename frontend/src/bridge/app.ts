@@ -73,6 +73,41 @@ export const GetInterfaces = async () => {
   return data.split('|')
 }
 
+export const ListProcesses = async () => {
+  const { flag, data } = await Bridge.ListProcesses()
+  if (!flag) throw data
+  return JSON.parse(data) as { name: string; exe: string }[]
+}
+
+export const ListDouyinExes = async () => {
+  const { flag, data } = await Bridge.ListDouyinExes()
+  if (!flag) throw data
+  return data as string
+}
+
+export const PickFile = async (title: string, pattern: string) => {
+  const { flag, data } = await Bridge.PickFile(title, pattern)
+  if (!flag) throw data
+  return data as string
+}
+
+export const BackgroundVideoURL = async () => {
+  const { flag, data } = await Bridge.BackgroundVideoURL()
+  if (!flag) throw data
+  return data as string
+}
+
+export const Translate = async (text: string, target: string) => {
+  const { flag, data } = await Bridge.Translate(text, target)
+  if (!flag) throw data
+  return JSON.parse(data) as {
+    text: string
+    sourceLang: string
+    targetLang: string
+    provider: string
+  }
+}
+
 export const Notify = async (title: string, body: string) => {
   if (!(await IsNotificationAvailable())) {
     throw new Error('Notifications not available on this platform')
