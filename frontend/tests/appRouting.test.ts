@@ -3,9 +3,11 @@ import test from 'node:test'
 
 import {
   DOUYIN_PROCESSES,
+  FAKEIP_EXCLUDED_SUFFIXES,
   SAFETY_DOMAIN_SUFFIXES,
   WECHAT_PROCESSES,
   applyAppRouting,
+  matchDnsServer,
   matchOutbound,
   sampleBaseConfig,
 } from '../src/utils/appRouting.ts'
@@ -220,7 +222,7 @@ test('dns sends non-cn and system lookups remote, and keeps cn, direct and safet
   )
 })
 
-test('proxy process dns uses fakeip when a fakeip server exists', () => {
+test('proxy process dns uses fakeip only for public A/AAAA queries', () => {
   const base = sampleBaseConfig()
   base.dns.servers.push({ type: 'fakeip', tag: 'fakeip-dns', inet4_range: '198.18.0.0/15' })
   const routed = applyAppRouting(base, {
@@ -228,12 +230,98 @@ test('proxy process dns uses fakeip when a fakeip server exists', () => {
     proxyOutbound: 'proxy',
     directOutbound: 'direct',
   })
-  const dnsRules = routed.dns.rules as Record<string, unknown>[]
-  const chrome = dnsRules.find((rule) => names(rule.process_name).includes('chrome.exe'))
-  assert.equal(chrome?.server, 'fakeip-dns')
-  assert.equal(routed.dns.final, 'Remote-DNS')
+  const dnsRules = routed.dns.rules as Record<string, any>[]
+  const logical = dnsRules.find((rule) => rule.type === 'logical' && rule.server === 'fakeip-dns')
+  assert.ok(logical)
+  assert.equal(logical.mode, 'and')
+  assert.ok(names(logical.rules[0].process_name).includes('chrome.exe'))
+  assert.equal(names(logical.rules[0].process_name).includes('Weixin.exe'), false)
+  assert.deepEqual(logical.rules[1].query_type, ['A', 'AAAA'])
+  assert.equal(logical.rules[2].invert, true)
+  for (const suffix of ['.lan', '.local', '.localhost', 'localhost', '.home.arpa']) {
+    assert.ok(names(logical.rules[2].domain_suffix).includes(suffix), suffix)
+  }
+  assert.deepEqual(names(logical.rules[2].domain_suffix), [...FAKEIP_EXCLUDED_SUFFIXES])
+
+  const fallback = dnsRules.find(
+    (rule) => names(rule.process_name).includes('chrome.exe') && rule.server === 'Remote-DNS',
+  )
+  assert.ok(fallback)
   const cn = dnsRules.find((rule) => ruleSets(rule).includes('geosite-cn'))
   assert.equal(cn?.server, 'Local-DNS')
+  assert.ok(dnsRules.indexOf(cn) < dnsRules.indexOf(logical))
+  assert.ok(dnsRules.indexOf(logical) < dnsRules.indexOf(fallback))
+  assert.equal(routed.dns.final, 'Remote-DNS')
+
+  const dns = (query: { processName?: string; domain?: string; queryType?: string }) =>
+    matchDnsServer(dnsRules, query)
+  assert.equal(dns({ processName: 'chrome.exe', domain: 'www.google.com', queryType: 'A' }), 'fakeip-dns')
+  assert.equal(dns({ processName: 'chrome.exe', domain: 'www.google.com', queryType: 'AAAA' }), 'fakeip-dns')
+  assert.equal(dns({ processName: 'chrome.exe', domain: 'www.google.com', queryType: 'TXT' }), 'Remote-DNS')
+  assert.equal(dns({ processName: 'chrome.exe', domain: 'www.google.com', queryType: 'HTTPS' }), 'Remote-DNS')
+  assert.equal(dns({ processName: 'chrome.exe', domain: 'printer.local', queryType: 'A' }), 'Remote-DNS')
+  assert.equal(dns({ processName: 'chrome.exe', domain: 'localhost', queryType: 'A' }), 'Remote-DNS')
+  assert.equal(dns({ processName: 'chrome.exe', domain: 'host.lan', queryType: 'AAAA' }), 'Remote-DNS')
+  assert.equal(dns({ processName: 'msedge.exe', domain: 'www.google.com', queryType: 'A' }), 'dhagn-local-dns')
+  assert.equal(dns({ processName: 'Weixin.exe', domain: 'www.google.com', queryType: 'A' }), 'dhagn-local-dns')
+  assert.equal(dns({ processName: 'douyin.exe', domain: 'www.google.com', queryType: 'AAAA' }), 'dhagn-local-dns')
+})
+
+test('mixed and http inbound traffic goes proxy without changing TUN routing', () => {
+  const base = sampleBaseConfig()
+  base.inbounds.push({ type: 'http', tag: 'http-in', listen: '127.0.0.1', listen_port: 20123 })
+  const routed = applyAppRouting(base, {
+    programs,
+    proxyOutbound: 'proxy',
+    directOutbound: 'direct',
+  })
+  const rules = routed.route.rules as Record<string, unknown>[]
+  const indexOf = (pred: (rule: Record<string, unknown>) => boolean) => rules.findIndex(pred)
+  const wechat = indexOf((rule) => names(rule.process_name).includes('Weixin.exe'))
+  const douyin = indexOf((rule) => names(rule.process_name).includes('douyin.exe'))
+  const inbound = indexOf((rule) => names(rule.inbound).includes('mixed-in') && rule.outbound === 'proxy')
+  const catchAll = indexOf((rule) => rule.process_path_regex === '.+' && rule.outbound === 'direct')
+  assert.ok(wechat >= 0 && douyin > wechat && inbound > douyin && catchAll > inbound)
+  assert.ok(names(rules[inbound]?.inbound).includes('http-in'))
+  assert.equal(names(rules[inbound]?.inbound).includes('tun-in'), false)
+
+  const app = {
+    processName: '达货爱vpn姑娘.exe',
+    processPath: String.raw`C:\达货爱vpn姑娘\达货爱vpn姑娘.exe`,
+  }
+  assert.equal(matchOutbound(rules, { ...app, inbound: 'mixed-in', clashMode: 'global' }), 'proxy')
+  assert.equal(matchOutbound(rules, { ...app, inbound: 'http-in', clashMode: 'rule' }), 'proxy')
+  assert.equal(matchOutbound(rules, { ...app, inbound: 'tun-in', clashMode: 'global' }), 'direct')
+  assert.equal(
+    matchOutbound(rules, { processName: 'notepad.exe', inbound: 'tun-in', clashMode: 'global' }),
+    'direct',
+  )
+  assert.equal(
+    matchOutbound(rules, { processName: 'chrome.exe', inbound: 'tun-in', clashMode: 'global' }),
+    'proxy',
+  )
+  assert.equal(
+    matchOutbound(rules, { processName: 'Weixin.exe', inbound: 'mixed-in', clashMode: 'global' }),
+    'direct',
+  )
+  assert.equal(
+    matchOutbound(rules, { processName: 'douyin.exe', inbound: 'http-in', clashMode: 'global' }),
+    'direct',
+  )
+  assert.equal(
+    matchOutbound(rules, { domain: 'weixin.qq.com', inbound: 'mixed-in', clashMode: 'global' }),
+    'direct',
+  )
+
+  const twice = applyAppRouting(routed, {
+    programs,
+    proxyOutbound: 'proxy',
+    directOutbound: 'direct',
+  })
+  const inboundRules = (twice.route.rules as Record<string, unknown>[]).filter((rule) =>
+    names(rule.inbound).includes('mixed-in'),
+  )
+  assert.equal(inboundRules.length, 1)
 })
 
 test('GeoSite-CN is kept on local dns and geolocation-!cn is not rewritten', () => {

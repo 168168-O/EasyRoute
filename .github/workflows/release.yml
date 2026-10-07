@@ -24,6 +24,12 @@ jobs:
           node-version: "22"
           cache: "pnpm"
           cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install sing-box 1.14.2
+        run: |
+          curl -fsSL -o /tmp/sing-box.tar.gz https://github.com/SagerNet/sing-box/releases/download/v1.14.2/sing-box-1.14.2-linux-amd64.tar.gz
+          tar -xzf /tmp/sing-box.tar.gz -C /tmp
+          sudo install -m 755 /tmp/sing-box-1.14.2-linux-amd64/sing-box /usr/local/bin/sing-box
+          sing-box version
       - name: Test and build frontend
         run: |
           cd frontend
@@ -40,7 +46,6 @@ jobs:
     runs-on: windows-latest
     env:
       APP_NAME: 达货爱vpn姑娘
-      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -62,29 +67,27 @@ jobs:
           & "$env:USERPROFILE/go/bin/wails.exe" build -m -s -trimpath -skipbindings -devtools -o "$env:APP_NAME.exe"
           if (-not (Test-Path "build/bin/$env:APP_NAME.exe")) { throw "exe was not produced" }
 
-          $headers = @{
-            "User-Agent" = "dhagn-release"
-            "Accept" = "application/vnd.github+json"
-          }
-          if ($env:GITHUB_TOKEN) { $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN" }
-          $release = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/SagerNet/sing-box/releases/latest"
-          $asset = @($release.assets) | Where-Object { $_.name -match '^sing-box-.+-windows-amd64\.zip$' } | Select-Object -First 1
-          if (-not $asset) { throw "sing-box windows-amd64 asset not found in $($release.tag_name)" }
-          Write-Host "==> Bundling $($asset.name)"
-          $download = Join-Path $env:TEMP $asset.name
-          Invoke-WebRequest -Headers $headers -Uri $asset.browser_download_url -OutFile $download
+          $singBoxVersion = "1.14.2"
+          $assetName = "sing-box-$singBoxVersion-windows-amd64.zip"
+          $downloadUrl = "https://github.com/SagerNet/sing-box/releases/download/v$singBoxVersion/$assetName"
+          $headers = @{ "User-Agent" = "dhagn-release" }
+          Write-Host "==> Bundling $assetName"
+          $download = Join-Path $env:TEMP $assetName
+          Invoke-WebRequest -Headers $headers -Uri $downloadUrl -OutFile $download
           $extract = Join-Path $env:TEMP "sing-box-extract"
           if (Test-Path $extract) { Remove-Item -Recurse -Force $extract }
           Expand-Archive -Path $download -DestinationPath $extract -Force
           $core = Get-ChildItem -Path $extract -Recurse -Filter "sing-box.exe" | Select-Object -First 1
-          if (-not $core) { throw "sing-box.exe missing inside $($asset.name)" }
+          if (-not $core) { throw "sing-box.exe missing inside $assetName" }
 
           $stage = "build/bin/stage"
           if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
           New-Item -ItemType Directory -Force -Path "$stage/data/sing-box" | Out-Null
           Copy-Item "build/bin/$env:APP_NAME.exe" $stage
           Copy-Item $core.FullName "$stage/data/sing-box/sing-box.exe"
-          & "$stage/data/sing-box/sing-box.exe" version
+          $versionOutput = (& "$stage/data/sing-box/sing-box.exe" version | Out-String)
+          Write-Host $versionOutput
+          if ($versionOutput -notmatch 'sing-box version 1\.14\.2') { throw "bundled sing-box is not 1.14.2: $versionOutput" }
           if (Test-Path "build/bin/$env:APP_NAME-windows-amd64.zip") {
             Remove-Item -Force "build/bin/$env:APP_NAME-windows-amd64.zip"
           }

@@ -104,8 +104,31 @@ export interface ConnectionQuery {
   processPath?: string
   domain?: string
   ipIsPrivate?: boolean
+  inbound?: string
   clashMode?: 'global' | 'rule' | 'direct'
 }
+
+export interface DnsQuery {
+  processName?: string
+  domain?: string
+  queryType?: string
+  clashMode?: 'global' | 'rule' | 'direct'
+}
+
+/** Same exclusions as the app's own Fake-IP DNS rule, plus the bare localhost name. */
+export const FAKEIP_EXCLUDED_SUFFIXES = [
+  '.lan',
+  '.localdomain',
+  '.example',
+  '.invalid',
+  '.localhost',
+  'localhost',
+  '.test',
+  '.local',
+  '.home.arpa',
+  '.msftconnecttest.com',
+  '.msftncsi.com',
+]
 
 const nameHit = (rule: Record<string, unknown>, processName: string) => {
   const names = asList(rule.process_name).map(lower)
@@ -125,6 +148,19 @@ export const matchOutbound = (rules: Record<string, unknown>[], query: Connectio
     if (rule.clash_mode && String(rule.clash_mode) !== clashMode) continue
     const action = rule.action
     if (action === 'sniff' || action === 'hijack-dns') continue
+
+    if (rule.inbound) {
+      const tags = asList(rule.inbound).map(String)
+      if (!query.inbound || !tags.includes(query.inbound)) continue
+      const hasMore =
+        rule.process_name ||
+        rule.process_path_regex ||
+        rule.domain_suffix ||
+        rule.ip_is_private === true ||
+        rule.clash_mode ||
+        rule.rule_set
+      if (!hasMore && rule.outbound) return rule.outbound as string
+    }
 
     if (rule.process_name && query.processName) {
       if (nameHit(rule, query.processName)) return rule.outbound as string | undefined
@@ -160,6 +196,51 @@ export const matchOutbound = (rules: Record<string, unknown>[], query: Connectio
   return undefined
 }
 
+const suffixHit = (suffixes: string[], domain: string) => {
+  const value = lower(domain)
+  return suffixes.some((suffix) => {
+    const item = lower(suffix)
+    const bare = item.startsWith('.') ? item.slice(1) : item
+    const withDot = item.startsWith('.') ? item : '.' + item
+    return value === item || value === bare || value.endsWith(withDot)
+  })
+}
+
+const matchesDnsRule = (rule: Record<string, any>, query: DnsQuery, queryType: string): boolean => {
+  if (!rule || typeof rule !== 'object') return false
+  if (rule.type === 'logical') {
+    const parts = Array.isArray(rule.rules) ? (rule.rules as Record<string, any>[]) : []
+    const results = parts.map((part) => matchesDnsRule(part, query, queryType))
+    return String(rule.mode || 'and') === 'or' ? results.some(Boolean) : results.every(Boolean)
+  }
+  if (rule.clash_mode && String(rule.clash_mode) !== (query.clashMode || 'rule')) return false
+  if (rule.rule_set) return false
+  if (rule.process_name && (!query.processName || !nameHit(rule, query.processName))) return false
+  if (rule.query_type) {
+    const types = asList(rule.query_type).map((item) => String(item).toUpperCase())
+    if (!types.includes(queryType)) return false
+  }
+  if (rule.domain_suffix) {
+    if (!query.domain) return false
+    const hit = suffixHit(asList(rule.domain_suffix), query.domain)
+    if (rule.invert ? hit : !hit) return false
+  }
+  return Boolean(rule.process_name || rule.query_type || rule.domain_suffix || rule.clash_mode)
+}
+
+/** First matching DNS server tag. rule_set rules are left to sing-box. */
+export const matchDnsServer = (rules: Record<string, unknown>[], query: DnsQuery) => {
+  const queryType = (query.queryType || 'A').toUpperCase()
+  for (const rule of rules) {
+    if (!rule || typeof rule !== 'object') continue
+    if (rule.action === 'sniff' || rule.action === 'hijack-dns') continue
+    if (matchesDnsRule(rule as Record<string, any>, query, queryType)) {
+      return rule.server as string | undefined
+    }
+  }
+  return undefined
+}
+
 const findProxyOutbound = (config: Record<string, any>, explicit?: string) => {
   if (explicit) return explicit
   const rules = (config.route?.rules || []) as Record<string, any>[]
@@ -172,7 +253,7 @@ const findProxyOutbound = (config: Record<string, any>, explicit?: string) => {
       rule.action === 'route' &&
       rule.outbound &&
       rule.outbound !== 'direct' &&
-      (rule.process_name || rule.process_path),
+      (rule.process_name || rule.process_path || rule.inbound),
   )
   if (processRule?.outbound) return String(processRule.outbound)
   const selector = ((config.outbounds || []) as Record<string, any>[]).find(
@@ -283,11 +364,23 @@ const collectCnGeositeTags = (config: Record<string, any>) => {
   return tags
 }
 
+const findProxyInboundTags = (config: Record<string, any>) => {
+  const tags: string[] = []
+  for (const inbound of (config.inbounds || []) as Record<string, any>[]) {
+    if (!inbound || inbound.disabled || !inbound.tag) continue
+    if (inbound.type !== 'mixed' && inbound.type !== 'http') continue
+    const tag = String(inbound.tag)
+    if (!tags.includes(tag)) tags.push(tag)
+  }
+  return tags
+}
+
 const buildPrefix = (
   programs: RoutedProgram[],
   extraDirectExes: string[],
   proxyOutbound: string,
   directOutbound: string,
+  proxyInboundTags: string[],
 ) => {
   const pinned = unique([...WECHAT_PROCESSES, ...DOUYIN_PROCESSES, ...extraDirectExes])
   const pinnedSet = new Set(pinned.map(lower))
@@ -330,6 +423,13 @@ const buildPrefix = (
     rules.push({ action: 'route', process_name: proxyExes, outbound: proxyOutbound })
   }
 
+  // The app's own Google fallback arrives on the mixed/http inbound and is
+  // identified as this process. That would hit the catch-all below and go
+  // direct. TUN traffic uses a different inbound, so it is unchanged.
+  if (proxyInboundTags.length) {
+    rules.push({ action: 'route', inbound: [...proxyInboundTags], outbound: proxyOutbound })
+  }
+
   // Any remaining program (unlisted, or explicitly 走本地) stays on the local network.
   rules.push({
     action: 'route',
@@ -356,11 +456,13 @@ export const applyAppRouting = (config: Record<string, any>, options: AppRouting
   ensureDirectOutbound(config, directOutbound)
   ensureTun(config)
 
+  const proxyInboundTags = findProxyInboundTags(config)
   const { rules: prefix, proxyExes, directExes } = buildPrefix(
     programs,
     options.extraDirectExes || [],
     proxyOutbound,
     directOutbound,
+    proxyInboundTags,
   )
 
   const route = (config.route = config.route || {})
@@ -405,9 +507,21 @@ export const applyAppRouting = (config: Record<string, any>, options: AppRouting
   for (const tag of cnTags) {
     dnsPrefix.push({ action: 'route', rule_set: tag, server: localServerFor(tag) })
   }
-  if (proxyExes.length) {
-    const server = fakeIpDns || remoteDns
-    if (server) dnsPrefix.push({ action: 'route', process_name: proxyExes, server })
+  if (proxyExes.length && fakeIpDns) {
+    dnsPrefix.push({
+      action: 'route',
+      server: fakeIpDns,
+      type: 'logical',
+      mode: 'and',
+      rules: [
+        { process_name: proxyExes },
+        { query_type: ['A', 'AAAA'] },
+        { domain_suffix: [...FAKEIP_EXCLUDED_SUFFIXES], invert: true },
+      ],
+    })
+  }
+  if (proxyExes.length && remoteDns) {
+    dnsPrefix.push({ action: 'route', process_name: proxyExes, server: remoteDns })
   }
 
   const dns = (config.dns = config.dns || {})
