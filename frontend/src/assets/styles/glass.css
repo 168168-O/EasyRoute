@@ -367,8 +367,74 @@ body {
   }
 }
 
-body[feature-no-animation='true'] #app .gui-switch {
+body[feature-no-animation='true'] #app .gui-switch,
+body[feature-no-animation='true'] .glass-chip {
   animation: none !important;
+}
+
+/* Compact option chips: full label, dim glass when off, iridescent when on. */
+.glass-chip {
+  --ring-angle: 0deg;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.82);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(6, 16, 42, 0.42));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  text-shadow: 0 1px 2px rgba(0, 12, 40, 0.65);
+}
+
+.glass-chip.on {
+  color: #fff;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(var(--accent-rgb), 0.46)) padding-box,
+    conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 14px rgba(var(--accent-rgb), 0.72),
+    0 0 24px rgba(var(--accent-2-rgb), 0.38);
+  animation: dhagn-ring 6s linear infinite;
+}
+
+.glass-chip:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(8, 18, 42, 0.36));
+}
+
+.glass-chip.on:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(var(--accent-rgb), 0.58)) padding-box,
+    conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box;
+}
+
+#app .gui-button.icon-round {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  flex: none;
+}
+
+#app .gui-button.icon-round svg {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-chip {
+    animation: none;
+  }
 }
 
 #app .gui-input,

@@ -221,14 +221,52 @@ onActivated(() => {
 <template>
   <div class="m-8 mt-0 sticky top-0 z-3">
     <div
-      class="sticky flex gap-8 items-center p-8 rounded-8 backdrop-blur-sm"
+      class="proxy-toolbar sticky flex flex-wrap gap-8 items-center p-8 rounded-8 backdrop-blur-sm"
       style="background-color: var(--card-bg)"
     >
-      <Switch v-model="appSettings.app.kernel.autoClose" label="home.controller.autoClose" />
-      <Switch v-model="appSettings.app.kernel.unAvailable" label="home.controller.unAvailable" />
-      <Switch v-model="appSettings.app.kernel.cardMode" label="home.controller.cardMode" />
-      <Switch v-model="appSettings.app.kernel.sortByDelay" label="home.controller.sortBy" />
-      <Button type="primary" size="small" @click="toggleMoreSettings"> ... </Button>
+      <button
+        type="button"
+        class="glass-chip"
+        :class="{ on: appSettings.app.kernel.autoClose }"
+        :aria-pressed="appSettings.app.kernel.autoClose"
+        @click="appSettings.app.kernel.autoClose = !appSettings.app.kernel.autoClose"
+      >
+        {{ t('home.controller.autoClose') }}
+      </button>
+      <button
+        type="button"
+        class="glass-chip"
+        :class="{ on: appSettings.app.kernel.unAvailable }"
+        :aria-pressed="appSettings.app.kernel.unAvailable"
+        @click="appSettings.app.kernel.unAvailable = !appSettings.app.kernel.unAvailable"
+      >
+        {{ t('home.controller.unAvailable') }}
+      </button>
+      <button
+        type="button"
+        class="glass-chip"
+        :class="{ on: appSettings.app.kernel.cardMode }"
+        :aria-pressed="appSettings.app.kernel.cardMode"
+        @click="appSettings.app.kernel.cardMode = !appSettings.app.kernel.cardMode"
+      >
+        {{ t('home.controller.cardMode') }}
+      </button>
+      <button
+        type="button"
+        class="glass-chip"
+        :class="{ on: appSettings.app.kernel.sortByDelay }"
+        :aria-pressed="appSettings.app.kernel.sortByDelay"
+        @click="appSettings.app.kernel.sortByDelay = !appSettings.app.kernel.sortByDelay"
+      >
+        {{ t('home.controller.sortBy') }}
+      </button>
+      <Button
+        type="primary"
+        icon="more"
+        class="icon-round"
+        :aria-expanded="showMoreSettings"
+        @click="toggleMoreSettings"
+      />
       <div class="ml-auto flex items-center">
         <Button v-tips="'home.overview.expandAll'" type="text" icon="expand" @click="expandAll" />
         <Button
