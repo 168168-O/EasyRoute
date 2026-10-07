@@ -402,6 +402,15 @@ export default {
         button: 'Button Only',
       },
     },
+    groups: {
+      selector: 'Selector',
+      urltest: 'URLTest',
+      fallback: 'Fallback',
+      loadbalance: 'LoadBalance',
+      direct: 'direct',
+      block: 'block',
+      global: 'GLOBAL',
+    },
     connections: {
       type: 'Type',
       processPath: 'Process Path',

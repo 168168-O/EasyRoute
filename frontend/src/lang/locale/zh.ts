@@ -401,6 +401,15 @@ export default {
         button: '仅按钮',
       },
     },
+    groups: {
+      selector: '手动选择',
+      urltest: '自动测速',
+      fallback: '故障转移',
+      loadbalance: '负载均衡',
+      direct: '直连',
+      block: '拦截',
+      global: '全局',
+    },
     connections: {
       type: '类型',
       processPath: '进程路径',

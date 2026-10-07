@@ -195,6 +195,31 @@ const locateGroup = (group: any, chain: string) => {
   }
 }
 
+const groupTypeKey: Record<string, string> = {
+  selector: 'home.groups.selector',
+  urltest: 'home.groups.urltest',
+  fallback: 'home.groups.fallback',
+  loadbalance: 'home.groups.loadbalance',
+}
+
+const outboundNameKey: Record<string, string> = {
+  direct: 'home.groups.direct',
+  block: 'home.groups.block',
+  global: 'home.groups.global',
+}
+
+const displayType = (type: string) => {
+  const key = groupTypeKey[type.toLowerCase()]
+  return key ? t(key) : type
+}
+
+const nameKey = (name: string) => outboundNameKey[name.toLowerCase()] || name
+
+const displayName = (name: string) => {
+  const key = outboundNameKey[name.toLowerCase()]
+  return key ? t(key) : name
+}
+
 const delayColor = (delay = 0) => {
   if (delay === 0) return 'var(--level-0-color)'
   if (delay < 500) return 'var(--level-1-color)'
@@ -293,15 +318,15 @@ onActivated(() => {
     >
       <div class="text-14 flex items-center gap-2 text-nowrap overflow-hidden">
         <img v-if="group.icon" :src="group.icon" class="w-24 h-24 mr-4" draggable="false" />
-        <span class="font-bold text-18">{{ group.name }}</span>
+        <span class="font-bold text-18">{{ displayName(group.name) }}</span>
         <span class="mx-8">
-          {{ group.type }}
+          {{ displayType(group.type) }}
         </span>
         <span> :: </span>
         <template v-for="(chain, index) in group.chains" :key="chain">
           <span v-if="index !== 0" style="color: gray"> / </span>
           <Button type="text" size="small" @click.stop="locateGroup(group, chain)">
-            {{ chain }}
+            {{ displayName(chain) }}
           </Button>
         </template>
       </div>
@@ -347,7 +372,7 @@ onActivated(() => {
           <Card
             v-for="proxy in group.all"
             :key="proxy.name"
-            :title="proxy.name"
+            :title="nameKey(proxy.name)"
             :selected="proxy.name === group.now"
             class="cursor-pointer"
             @click="useProxyWithCatchError(group, proxy)"
@@ -364,14 +389,14 @@ onActivated(() => {
                 {{ proxy.delay && proxy.delay + 'ms' }}
               </div>
             </Button>
-            <div class="text-12 my-2">{{ proxy.type }} {{ proxy.udp ? ':: udp' : '' }}</div>
+            <div class="text-12 my-2">{{ displayType(proxy.type) }} {{ proxy.udp ? ':: udp' : '' }}</div>
           </Card>
         </div>
         <div v-else class="grid grid-cols-32 gap-8">
           <div
             v-for="proxy in group.all"
             :key="proxy.name"
-            v-tips.fast="proxy.name"
+            v-tips.fast="nameKey(proxy.name)"
             :style="{ background: delayColor(proxy.delay) }"
             :class="proxy.name === group.now ? 'rounded-full shadow' : ''"
             class="w-12 h-12 rounded-4 flex items-center justify-center"
