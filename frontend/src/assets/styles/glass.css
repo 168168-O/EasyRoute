@@ -286,28 +286,89 @@ body {
 
 
 #app .gui-switch {
-  width: 66px;
-  min-width: 66px;
-  height: 32px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.1)) !important;
-  box-shadow: inset 0 0 0 1.4px rgba(255, 255, 255, 0.55);
+  --ring-angle: 0deg;
+  width: max-content;
+  max-width: none;
+  height: auto;
+  min-height: 0;
+  border-radius: 999px !important;
+  color: #fff !important;
+  border: 2px solid transparent !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(6, 16, 42, 0.55)) padding-box,
+    conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box !important;
+  background-color: transparent !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 0 8px rgba(var(--accent-rgb), 0.22);
+  animation: dhagn-ring 6s linear infinite;
+  text-shadow: 0 1px 2px rgba(0, 12, 40, 0.65);
+}
+
+#app .gui-switch:not(:has(.slot)) {
+  width: 52px;
+}
+
+#app .gui-switch.small:not(:has(.slot)) {
+  width: 46px;
+}
+
+#app .gui-switch.on {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(var(--accent-rgb), 0.46)) padding-box,
+    conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 14px rgba(var(--accent-rgb), 0.72),
+    0 0 24px rgba(var(--accent-2-rgb), 0.38);
+}
+
+#app .gui-switch:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(8, 18, 42, 0.42)) padding-box,
+    conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box !important;
+}
+
+#app .gui-switch.on:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(var(--accent-rgb), 0.58)) padding-box,
+    conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box !important;
 }
 
 #app .gui-switch .dot {
-  width: 24px;
-  height: 24px;
-  top: 4px;
-  background: radial-gradient(circle at 35% 30%, #fff, #e9edf5 55%, #b9c1cf) !important;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: transparent !important;
+  box-shadow:
+    0 0 6px rgba(var(--accent-2-rgb), 0.95),
+    0 0 12px rgba(var(--accent-rgb), 0.6);
 }
 
-
-#app .gui-switch.on .dot {
-  left: 38px !important;
+#app .gui-switch.small .dot {
+  width: 18px;
+  height: 18px;
 }
 
-#app .gui-switch.off .dot {
-  left: 4px !important;
+#app .gui-switch .slot {
+  display: block;
+  overflow: visible;
+  white-space: nowrap;
+  text-overflow: clip;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  word-break: keep-all;
+  margin: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app .gui-switch {
+    animation: none;
+  }
+}
+
+body[feature-no-animation='true'] #app .gui-switch {
+  animation: none !important;
 }
 
 #app .gui-input,
@@ -684,7 +745,6 @@ body[theme-mode='light'] .tr-error { color: #9d1c1c; }
   .tr-swap,
   #app .gui-radio.tone-gold .gui-radio-button.active,
   #app .gui-checkbox-button.active,
-  #app .gui-switch.on,
   #app .gui-tag.color-primary,
   .step > i
 ) {
@@ -716,7 +776,6 @@ body[theme-mode='light'] .tr-error { color: #9d1c1c; }
   .tr-swap,
   #app .gui-radio.tone-gold .gui-radio-button.active,
   #app .gui-checkbox-button.active,
-  #app .gui-switch.on,
   #app .gui-tag.color-primary
 ):hover {
   background:
@@ -733,8 +792,7 @@ body[theme-mode='light'] .tr-error { color: #9d1c1c; }
   #app .gui-button.primary,
   .btn.add,
   .pill-btn,
-  .tr-swap,
-  #app .gui-switch.on
+  .tr-swap
 ):active {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(8, 18, 42, 0.42)) padding-box,
@@ -749,7 +807,6 @@ body[theme-mode='light'] :is(
   .tr-swap,
   #app .gui-radio.tone-gold .gui-radio-button.active,
   #app .gui-checkbox-button.active,
-  #app .gui-switch.on,
   #app .gui-tag.color-primary,
   .step > i
 ) {
@@ -774,7 +831,6 @@ body[theme-mode='light'] :is(
     .tr-swap,
     #app .gui-radio.tone-gold .gui-radio-button.active,
     #app .gui-checkbox-button.active,
-    #app .gui-switch.on,
     #app .gui-tag.color-primary,
     .step > i
   ) {
@@ -788,7 +844,6 @@ body[feature-no-animation='true'] :is(
   .btn.add,
   .pill-btn,
   .tr-swap,
-  #app .gui-switch.on,
   .step > i
 ) {
   animation: none !important;
