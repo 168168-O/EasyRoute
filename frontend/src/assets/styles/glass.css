@@ -210,12 +210,15 @@ body {
 /* Inner glass content */
 #app .app-content {
   min-height: 0;
+  overflow: hidden;
 }
 
 #app .app-page {
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
+  padding-bottom: 28px;
+  scroll-padding-bottom: 28px;
   border-radius: 22px;
   background: linear-gradient(160deg, rgba(14, 44, 110, 0.42), rgba(4, 22, 64, 0.4) 55%, rgba(12, 40, 100, 0.32));
   box-shadow:
@@ -550,12 +553,10 @@ body[theme-mode='light'] .note b {
 .tr-page {
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: none;
   min-width: 0;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
 }
 .tr-page .rt-head,
 .tr-actions,
@@ -578,11 +579,9 @@ body[theme-mode='light'] .note b {
 .tr-panes {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
   gap: 12px;
   align-items: stretch;
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: none;
   min-width: 0;
   width: 100%;
   max-width: 100%;
@@ -592,9 +591,7 @@ body[theme-mode='light'] .note b {
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-  min-height: 0;
   max-width: 100%;
-  height: 100%;
   color: var(--text-2);
   font-size: 13px;
 }
@@ -603,9 +600,8 @@ body[theme-mode='light'] .note b {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  flex: 1 1 auto;
-  height: 0;
-  min-height: 96px;
+  height: clamp(140px, 30vh, 180px);
+  min-height: 140px;
   box-sizing: border-box;
   resize: none;
   border-radius: 18px;
@@ -625,10 +621,9 @@ body[theme-mode='light'] .note b {
   font-size: 20px;
   padding: 0;
 }
-@media (max-width: 759px) {
+@media (max-width: 599px) {
   .tr-panes {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
   }
 }
 .tr-actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
@@ -654,10 +649,7 @@ body[theme-mode='light'] .note b {
 .tr-history span { color: var(--text-2); font-size: 13px; }
 .tr-history:hover { background: rgba(255, 255, 255, 0.06); }
 .tr-history-list {
-  min-height: 0;
-  overflow-y: auto;
-  flex: 0 1 auto;
-  max-height: 96px;
+  padding-bottom: 4px;
 }
 
 body[theme-mode='light'] .tr-box,
