@@ -121,11 +121,10 @@ body {
 #app .app-main {
   margin: 0 14px 14px;
   border-radius: 28px;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 40%, rgba(160, 220, 255, 0.06));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
   box-shadow:
-    0 30px 80px -20px rgba(0, 10, 40, 0.55),
-    0 0 30px rgba(var(--cyan-rgb), 0.25),
-    inset 0 0 0 1.5px rgba(255, 244, 214, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
   overflow: hidden;
   position: relative;
 }
@@ -136,8 +135,10 @@ body {
 }
 
 #app .app-titlebar__name {
-  letter-spacing: 2px;
-  text-shadow: 0 0 12px rgba(var(--wave-2-rgb), 0.6);
+  letter-spacing: 1px;
+  color: #fff;
+  font-weight: 600;
+  text-shadow: none;
 }
 
 #app .brand-mark {
@@ -161,9 +162,7 @@ body {
 .empty-mark {
   width: 180px;
   height: auto;
-  filter:
-    drop-shadow(0 0 12px rgba(var(--accent-2-rgb), 0.7))
-    drop-shadow(0 0 24px rgba(var(--accent-rgb), 0.45));
+  filter: drop-shadow(0 8px 16px rgba(0, 12, 40, 0.28));
   pointer-events: none;
   user-select: none;
 }
@@ -178,7 +177,7 @@ body {
   color: #fff !important;
   background: transparent !important;
   font-weight: 600;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+  text-shadow: none;
   gap: 6px;
 }
 
@@ -187,11 +186,11 @@ body {
 }
 
 #app .main-nav__button.is-active {
-  color: var(--accent) !important;
-  background: rgba(var(--accent-rgb), 0.16) !important;
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
   box-shadow:
-    inset 0 0 0 1.5px rgba(var(--accent-rgb), 0.9),
-    0 0 22px rgba(var(--accent-rgb), 0.6);
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 0 0 1px rgba(var(--accent-rgb), 0.9);
 }
 
 #app .nav-ico {
@@ -220,18 +219,28 @@ body {
   padding-bottom: 28px;
   scroll-padding-bottom: 28px;
   border-radius: 22px;
-  background: linear-gradient(160deg, rgba(14, 44, 110, 0.42), rgba(4, 22, 64, 0.4) 55%, rgba(12, 40, 100, 0.32));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(8, 20, 48, 0.16));
   box-shadow:
-    0 20px 50px -20px rgba(0, 10, 40, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(10px) saturate(150%);
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.32),
+    inset 0 -10px 18px rgba(0, 8, 24, 0.08);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 #app .gui-card {
   background: transparent !important;
   box-shadow: none !important;
   color: var(--text-1);
+}
+
+#app .proxy-toolbar,
+#app .overview-toolbar,
+#app .controller-panel .sticky {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(8, 20, 48, 0.22)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 
 #app .gui-tabs-tab .gui-button {
@@ -244,44 +253,40 @@ body {
 #app .gui-tabs-tab .gui-button.is-active {
   color: #fff !important;
   font-weight: 700;
-  text-shadow: 0 0 10px rgba(var(--cyan-rgb), 1), 0 0 22px rgba(var(--cyan-rgb), 0.7);
+  text-shadow: none;
 }
 
 #app .gui-radio {
   border: 0 !important;
   border-radius: 999px;
   padding: 3px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.07));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
   box-shadow:
-    0 0 0 1.6px var(--accent),
-    0 0 14px rgba(var(--accent-rgb), 0.75),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45);
-  overflow: hidden;
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.32);
 }
 
 #app .gui-radio-button {
   background: transparent !important;
-  color: #fff !important;
-  border: 0 !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+  border: 2px solid transparent !important;
   border-radius: 999px !important;
-  text-shadow: 0 1px 2px rgba(0, 20, 60, 0.7);
+  font-weight: 600;
+  text-shadow: none;
 }
 
 #app .gui-radio-button.active {
+  --ring-angle: 0deg;
   color: #fff !important;
   font-weight: 700;
-  background: linear-gradient(180deg, #8fd8ff 0%, #2e9bff 45%, #0a5cf0 100%) !important;
-  box-shadow: 0 0 10px #3fb0ff, 0 0 26px rgba(40, 150, 255, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.75);
-}
-
-#app .gui-radio.tone-green .gui-radio-button.active {
-  background: linear-gradient(180deg, #6cffb0 0%, #14d877 45%, #00a955 100%) !important;
-  box-shadow: 0 0 10px #22f08a, 0 0 26px rgba(20, 230, 120, 0.75);
-}
-
-#app .gui-radio.tone-purple .gui-radio-button.active {
-  background: linear-gradient(180deg, #cdb0ff 0%, #9a5cff 45%, #6b1fff 100%) !important;
-  box-shadow: 0 0 10px #a774ff, 0 0 26px rgba(150, 90, 255, 0.8);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(10, 22, 48, 0.16)) padding-box,
+    conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 0 10px rgba(var(--accent-rgb), 0.4);
+  animation: dhagn-ring 6s linear infinite;
+  text-shadow: none;
 }
 
 
@@ -302,7 +307,7 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.28),
     0 0 8px rgba(var(--accent-rgb), 0.22);
   animation: dhagn-ring 6s linear infinite;
-  text-shadow: 0 1px 2px rgba(0, 12, 40, 0.65);
+  text-shadow: none;
 }
 
 #app .gui-switch:not(:has(.slot)) {
@@ -391,8 +396,8 @@ body[feature-no-animation='true'] .glass-chip {
   white-space: nowrap;
   cursor: pointer;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(6, 16, 42, 0.42));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
-  text-shadow: 0 1px 2px rgba(0, 12, 40, 0.65);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  text-shadow: none;
 }
 
 .glass-chip.on {
@@ -446,7 +451,21 @@ body[feature-no-animation='true'] .glass-chip {
 #app .text-16,
 #app .text-18,
 #app .font-bold {
-  text-shadow: 0 1px 2px rgba(0, 12, 40, 0.85);
+  text-shadow: none;
+}
+
+body:not([theme-mode='light']) #app .text-16.font-bold,
+body:not([theme-mode='light']) #app .text-18,
+body:not([theme-mode='light']) #app .font-bold {
+  color: #fff;
+}
+
+#app .text-16.font-bold {
+  font-weight: 600;
+}
+
+#app .text-18.font-bold {
+  font-weight: 700;
 }
 
 body[theme-mode='light'] {
@@ -477,52 +496,59 @@ body[theme-mode='light'] #app .main-nav__button.is-active {
 }
 
 
-/* Theme strip */
+/* Theme chips: separate glass pills, one iridescent ring on the selected swatch. */
 .themes {
-  display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   width: 100%;
-  border-radius: 999px;
-  padding: 3px;
-  background: rgba(10, 40, 100, 0.35);
-  box-shadow: 0 0 0 1.6px var(--accent), 0 0 16px rgba(var(--accent-rgb), 0.7);
+  padding: 0;
+  background: none;
+  box-shadow: none;
   pointer-events: auto;
 }
 
 .themes .t {
+  --ring-angle: 0deg;
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
+  line-height: 1.2;
   color: #fff;
-  padding: 7px 4px;
+  padding: 6px 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  background: linear-gradient(180deg, rgba(var(--c), 0.62), rgba(var(--c), 0.3));
-  border: 0;
-  text-shadow: 0 1px 2px rgba(0, 15, 50, 0.95);
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(8, 18, 42, 0.22));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  text-shadow: none;
+  white-space: nowrap;
 }
 
-.themes .t:first-child { border-radius: 999px 0 0 999px; }
-.themes .t:last-child { border-radius: 0 999px 999px 0; }
 .themes .t i {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: rgb(var(--c));
-  box-shadow: 0 0 8px rgb(var(--c));
+  background: radial-gradient(circle at 32% 30%, #fff, rgb(var(--c)) 42%, rgb(var(--c)));
+  box-shadow: 0 0 6px rgb(var(--c));
   flex: none;
 }
+
 .themes .t.on {
-  color: #2a1d06;
-  border-radius: 999px;
-  text-shadow: none;
-  background: linear-gradient(180deg, color-mix(in srgb, rgb(var(--c)) 55%, #fff), rgb(var(--c)));
-  box-shadow: 0 0 10px rgb(var(--c)), 0 0 26px rgba(var(--c), 0.9);
+  color: #fff;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(8, 18, 42, 0.2)) padding-box,
+    conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 0 12px rgba(var(--accent-rgb), 0.55),
+    0 0 18px rgba(var(--c), 0.45);
+  animation: dhagn-ring 6s linear infinite;
 }
-html[data-font='xlarge'] .themes { grid-template-columns: repeat(5, 1fr); border-radius: 22px; }
-html[data-font='xlarge'] .themes .t { border-radius: 999px; }
 
 .tag-new {
   font-size: 12px;
@@ -586,11 +612,13 @@ html[data-font='xlarge'] .themes .t { border-radius: 999px; }
 .ghost-btn {
   cursor: pointer;
   color: #fff;
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 999px;
   padding: 7px 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
-  box-shadow: inset 0 0 0 1.2px rgba(255, 255, 255, 0.6);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  text-shadow: none;
+  font-weight: 600;
 }
 .group { display: flex; align-items: center; gap: 10px; padding: 12px 4px 6px; color: var(--text-2); }
 .group b { color: #fff; font-size: 16px; }
@@ -809,7 +837,6 @@ body[theme-mode='light'] .tr-error { color: #9d1c1c; }
   .btn.add,
   .pill-btn,
   .tr-swap,
-  #app .gui-radio.tone-gold .gui-radio-button.active,
   #app .gui-checkbox-button.active,
   #app .gui-tag.color-primary,
   .step > i
@@ -824,14 +851,11 @@ body[theme-mode='light'] .tr-error { color: #9d1c1c; }
     linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(8, 18, 42, 0.34)) padding-box,
     conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box !important;
   background-color: transparent !important;
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.75),
-    0 0 14px rgba(var(--accent-rgb), 0.5),
-    0 0 26px rgba(var(--accent-2-rgb), 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 0 12px rgba(var(--accent-rgb), 0.4);
   animation: dhagn-ring 6s linear infinite;
-  text-shadow: 0 1px 2px rgba(0, 12, 40, 0.65);
+  text-shadow: none;
 }
 
 :is(
@@ -840,7 +864,6 @@ body[theme-mode='light'] .tr-error { color: #9d1c1c; }
   .btn.add,
   .pill-btn,
   .tr-swap,
-  #app .gui-radio.tone-gold .gui-radio-button.active,
   #app .gui-checkbox-button.active,
   #app .gui-tag.color-primary
 ):hover {
@@ -871,7 +894,6 @@ body[theme-mode='light'] :is(
   .btn.add,
   .pill-btn,
   .tr-swap,
-  #app .gui-radio.tone-gold .gui-radio-button.active,
   #app .gui-checkbox-button.active,
   #app .gui-tag.color-primary,
   .step > i
@@ -895,10 +917,11 @@ body[theme-mode='light'] :is(
     .btn.add,
     .pill-btn,
     .tr-swap,
-    #app .gui-radio.tone-gold .gui-radio-button.active,
     #app .gui-checkbox-button.active,
     #app .gui-tag.color-primary,
-    .step > i
+    .step > i,
+    #app .gui-radio-button.active,
+    .themes .t.on
   ) {
     animation: none;
   }

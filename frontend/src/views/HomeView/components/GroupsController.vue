@@ -246,7 +246,7 @@ onActivated(() => {
 <template>
   <div class="m-8 mt-0 sticky top-0 z-3">
     <div
-      class="proxy-toolbar sticky flex flex-wrap gap-8 items-center p-8 rounded-8 backdrop-blur-sm"
+      class="proxy-toolbar sticky flex flex-wrap gap-8 items-center p-8 rounded-8"
       style="background-color: var(--card-bg)"
     >
       <button
@@ -312,7 +312,7 @@ onActivated(() => {
   </div>
   <div v-for="group in groups" :key="group.name" class="m-8">
     <div
-      class="sticky z-2 flex gap-8 items-center p-8 rounded-8 backdrop-blur-sm"
+      class="sticky z-2 flex gap-8 items-center p-8 rounded-8"
       style="top: 52px; background-color: var(--card-bg)"
       @click="toggleExpanded(group.name)"
     >
