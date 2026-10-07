@@ -85,7 +85,7 @@ watch(showController, (v) => {
       v-if="(!kernelApiStore.running && !kernelApiStore.stopping) || kernelApiStore.starting"
       class="w-full h-[90%] flex flex-col items-center justify-center"
     >
-      <img :src="logo" draggable="false" class="w-128 mb-16" />
+      <img :src="logo" draggable="false" class="empty-mark mb-16" alt="" />
 
       <template v-if="profilesStore.profiles.length === 0">
         <p>{{ t('home.noProfile', [APP_TITLE]) }}</p>
