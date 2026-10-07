@@ -193,16 +193,18 @@ const preview = (text: string) => (text.length > 42 ? text.slice(0, 42) + '…' 
       <b>{{ t('translate.history') }}</b>
       <span>{{ history.length }}</span>
     </div>
-    <div v-if="!history.length" class="app-exe">{{ t('translate.historyEmpty') }}</div>
-    <button
-      v-for="item in history"
-      :key="item.id"
-      type="button"
-      class="tr-history"
-      @click="restore(item)"
-    >
-      <b>{{ preview(item.input) }}</b>
-      <span>{{ preview(item.output) }}</span>
-    </button>
+    <div class="tr-history-list">
+      <div v-if="!history.length" class="app-exe">{{ t('translate.historyEmpty') }}</div>
+      <button
+        v-for="item in history"
+        :key="item.id"
+        type="button"
+        class="tr-history"
+        @click="restore(item)"
+      >
+        <b>{{ preview(item.input) }}</b>
+        <span>{{ preview(item.output) }}</span>
+      </button>
+    </div>
   </div>
 </template>
