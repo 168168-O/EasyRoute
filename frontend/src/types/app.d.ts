@@ -2,6 +2,8 @@ declare namespace App {
   type OS = 'windows' | 'linux' | 'darwin'
   type Theme = 'auto' | 'light' | 'dark'
   type Color = 'default' | 'green' | 'purple' | 'custom'
+  type FontScale = 'small' | 'standard' | 'large' | 'xlarge'
+  type AppRouteMode = 'proxy' | 'direct'
   type View = 'grid' | 'list'
   type WindowStartState =
     | 0 // Normal
@@ -51,6 +53,16 @@ declare namespace App {
     lang: 'en' | 'zh' | string
     theme: Theme
     color: Color
+    themePalette: string
+    fontScale: FontScale
+    dynamicBackground: boolean
+    backgroundVideo: string
+    appPrograms: {
+      id: string
+      name: string
+      exe: string
+      mode: AppRouteMode
+    }[]
     primaryColor: string
     secondaryColor: string
     fontFamily: string

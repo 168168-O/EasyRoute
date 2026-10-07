@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 interface Props {
   options?: { label: string; value: string | number | boolean }[]
   size?: 'default' | 'small'
+  tone?: 'blue' | 'green' | 'purple' | 'gold'
 }
 
 const model = defineModel<string | number | boolean>()
@@ -11,6 +12,7 @@ const model = defineModel<string | number | boolean>()
 withDefaults(defineProps<Props>(), {
   options: () => [],
   size: 'default',
+  tone: 'blue',
 })
 
 const emits = defineEmits(['change'])
@@ -29,7 +31,7 @@ const handleSelect = (val: string | number | boolean) => {
 
 <template>
   <div
-    :class="[size]"
+    :class="[size, tone && `tone-${tone}`]"
     class="gui-radio inline-flex rounded-full text-12 overflow-hidden"
     role="radiogroup"
   >

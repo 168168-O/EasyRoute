@@ -1,5 +1,6 @@
 import { type RouteRecordRaw } from 'vue-router'
 
+import AppRoutingView from '@/views/AppRoutingView/index.vue'
 import HomeView from '@/views/HomeView/index.vue'
 import PluginsView from '@/views/PluginsView/index.vue'
 import ProfilesView from '@/views/ProfilesView/index.vue'
@@ -16,6 +17,16 @@ const routes: RouteRecordRaw[] = [
     meta: {
       name: 'router.overview',
       icon: 'overview',
+    },
+  },
+  {
+    path: '/routing',
+    name: 'AppRouting',
+    component: AppRoutingView,
+    meta: {
+      name: 'router.appRouting',
+      icon: 'appRouting',
+      hidden: false,
     },
   },
   {

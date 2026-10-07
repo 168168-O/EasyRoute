@@ -1,9 +1,12 @@
-name: Build GUI.for.SingBox
+name: Build 达货爱vpn姑娘
 
 on:
   push:
+    branches: [main]
     tags:
       - "v*"
+  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -11,20 +14,21 @@ permissions:
 jobs:
   Build-Frontend:
     runs-on: ubuntu-latest
-    if: github.repository == 'GUI-for-Cores/GUI.for.SingBox'
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 10
       - uses: actions/setup-node@v6
         with:
-          node-version: "latest"
+          node-version: "22"
           cache: "pnpm"
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: |
+      - name: Test and build frontend
+        run: |
           cd frontend
           pnpm install --frozen-lockfile
+          pnpm test
           pnpm build-only
       - uses: actions/upload-artifact@v6
         with:
@@ -35,7 +39,7 @@ jobs:
     needs: Build-Frontend
     runs-on: windows-latest
     env:
-      APP_NAME: GUI.for.SingBox
+      APP_NAME: 达货爱vpn姑娘
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -48,124 +52,24 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
-      - name: Build & Pack Windows
+      - name: Build Windows amd64
         shell: pwsh
         run: |
-          function Build-And-Pack {
-            param([string]$arch)
-            $env:GOOS="windows"
-            $env:GOARCH=$arch
-
-            Write-Host "==> Building Windows $arch..."
-            ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -o "$env:APP_NAME.exe"
-
-            cd build/bin
-            $zipName = "$env:APP_NAME-windows-$arch.zip"
-            Compress-Archive -Path "$env:APP_NAME.exe" -DestinationPath $zipName -Force
-            cd ../..
-          }
-
-          $arches = @("amd64","arm64","386")
-          foreach ($arch in $arches) { Build-And-Pack $arch }
+          $env:GOOS = "windows"
+          $env:GOARCH = "amd64"
+          Write-Host "==> Building Windows amd64..."
+          & "$env:USERPROFILE/go/bin/wails.exe" build -m -s -trimpath -skipbindings -devtools -o "$env:APP_NAME.exe"
+          if (-not (Test-Path "build/bin/$env:APP_NAME.exe")) { throw "exe was not produced" }
+          Compress-Archive -Path "build/bin/$env:APP_NAME.exe" -DestinationPath "build/bin/$env:APP_NAME-windows-amd64.zip" -Force
 
       - uses: actions/upload-artifact@v6
         with:
-          name: windows-builds
-          path: build/bin/*.zip
-
-  Build-macOS:
-    needs: Build-Frontend
-    runs-on: macos-latest
-    env:
-      APP_NAME: GUI.for.SingBox
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          check-latest: true
-      - run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-      - uses: actions/download-artifact@v8
-        with:
-          name: frontend-dist
-          path: frontend/dist
-      - run: |
-          go mod vendor
-          sed -i "" "s/\[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular\]/[NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory]/g" vendor/github.com/wailsapp/wails/v2/internal/frontend/desktop/darwin/AppDelegate.m
-
-      - name: Build & Pack macOS
-        run: |
-          build_and_pack() {
-            arch=$1
-            export GOOS=darwin GOARCH=$arch
-
-            echo "==> Building macOS $arch..."
-            ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -o $APP_NAME.exe
-
-            cd build/bin
-            zip -q -r $APP_NAME-darwin-$arch.zip $APP_NAME.app
-            cd ../..
-          }
-
-          for arch in amd64 arm64; do build_and_pack $arch; done
-
-      - uses: actions/upload-artifact@v6
-        with:
-          name: macos-builds
-          path: build/bin/*.zip
-
-  Build-Linux:
-    needs: Build-Frontend
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-latest
-          - arch: arm64
-            runner: ubuntu-26.04-arm
-    runs-on: ${{ matrix.runner }}
-    env:
-      APP_NAME: GUI.for.SingBox
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          check-latest: true
-      - run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
-      - uses: actions/download-artifact@v8
-        with:
-          name: frontend-dist
-          path: frontend/dist
-      - run: |
-          sudo apt-get update
-          sudo apt-get install libgtk-3-dev libwebkit2gtk-4.1-dev
-
-      - name: Build & Pack Linux
-        run: |
-          build_and_pack() {
-            arch=$1
-            export GOOS=linux GOARCH=$arch
-
-            echo "==> Building Linux $arch..."
-            ~/go/bin/wails build -m -s -trimpath -skipbindings -devtools -tags webkit2_41 -o $APP_NAME.exe
-
-            cd build/bin
-            mv $APP_NAME.exe $APP_NAME
-            zip $APP_NAME-linux-$arch.zip $APP_NAME
-            cd ../..
-          }
-
-          build_and_pack ${{ matrix.arch }}
-
-      - uses: actions/upload-artifact@v6
-        with:
-          name: linux-build-${{ matrix.arch }}
+          name: 达货爱vpn姑娘-windows-amd64
           path: build/bin/*.zip
 
   Release:
-    needs: [Build-Windows, Build-macOS, Build-Linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [Build-Windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v8
@@ -180,4 +84,5 @@ jobs:
           draft: false
           prerelease: ${{ contains(github.ref_name, 'dev') }}
           body: |
-            Auto-generated release from GitHub Actions.
+            Windows amd64 build of 达货爱vpn姑娘.
+            Based on GUI.for.SingBox (GPL-3.0).

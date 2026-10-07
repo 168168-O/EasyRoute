@@ -1,18 +1,13 @@
 name: Rolling Release
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "frontend/**"
-
   workflow_dispatch:
 
 jobs:
   Build:
     permissions: write-all
     runs-on: ubuntu-latest
-    if: github.repository == 'GUI-for-Cores/GUI.for.SingBox'
+    if: github.repository == '168168-O/EasyRoute'
     steps:
       - uses: actions/checkout@v4
         with:

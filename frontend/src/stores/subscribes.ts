@@ -7,6 +7,7 @@ import { DefaultSubscribeScript, SubscribesFilePath } from '@/constant/app'
 import { DefaultExcludeProtocols } from '@/constant/kernel'
 import { PluginTriggerEvent, RequestMethod, RequestProxyMode } from '@/enums/app'
 import { usePluginsStore } from '@/stores'
+import { normalizeSubscriptionProxies } from '@/utils/subscriptionConvert'
 import {
   sampleID,
   isValidSubJson,
@@ -135,11 +136,16 @@ export const useSubscribesStore = defineStore('subscribes', () => {
       throw 'Not a valid subscription data'
     }
 
+    proxies = normalizeSubscriptionProxies(proxies)
+    if (!proxies.length) {
+      throw '订阅里没有可用节点'
+    }
+
     const pluginStore = usePluginsStore()
 
     proxies = await pluginStore.onSubscribeTrigger(proxies, s)
 
-    if (proxies.some((proxy) => proxy.name && !proxy.tag) || proxies[0]?.base64) {
+    if (proxies.some((proxy) => (proxy.name && !proxy.tag) || proxy.base64)) {
       throw 'You need to install the [节点转换] plugin first'
     }
 

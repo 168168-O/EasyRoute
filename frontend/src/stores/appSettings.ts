@@ -49,9 +49,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   let latestUserSettings: string
 
   const app = ref<App.AppSettings>({
-    lang: Lang.EN,
-    theme: Theme.Auto,
+    lang: Lang.ZH,
+    theme: Theme.Dark,
     color: Color.Default,
+    themePalette: 'gold-sea',
+    fontScale: 'standard',
+    dynamicBackground: true,
+    backgroundVideo: '',
+    appPrograms: [],
     primaryColor: '#000',
     secondaryColor: '#545454',
     fontFamily: DefaultFontFamily,
@@ -186,6 +191,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     if (settings.debugModalSideBySide === undefined) {
       settings.debugModalSideBySide = false
     }
+    if (!settings.themePalette) settings.themePalette = 'gold-sea'
+    if (!settings.fontScale) settings.fontScale = 'standard'
+    if (settings.dynamicBackground === undefined) settings.dynamicBackground = true
+    if (settings.backgroundVideo === undefined) settings.backgroundVideo = ''
+    if (!Array.isArray(settings.appPrograms)) settings.appPrograms = []
 
     app.value = settings
     latestUserSettings = stringify(app.value)
@@ -207,11 +217,25 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       }
     },
     color(color: App.Color, primary: string, secondary: string) {
-      if (color !== Color.Custom) {
+      if (color === Color.Default) {
+        const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()
+        primary = accent || '#D4B26A'
+        secondary = accent || '#8FD3FF'
+      } else if (color !== Color.Custom) {
         ;({ primary, secondary } = Colors[color] ?? { primary, secondary })
       }
       document.documentElement.style.setProperty('--primary-color', primary)
       document.documentElement.style.setProperty('--secondary-color', secondary)
+    },
+    themePalette(palette: string) {
+      document.documentElement.dataset.theme = palette || 'gold-sea'
+    },
+    fontScale(scale: App.FontScale) {
+      const value = scale || 'standard'
+      if (value === 'standard') delete document.documentElement.dataset.font
+      else document.documentElement.dataset.font = value
+      const zoom = { small: '0.92', standard: '1.08', large: '1.18', xlarge: '1.32' }[value]
+      document.documentElement.style.setProperty('--font-scale', zoom)
     },
     feature(
       outline: boolean,
@@ -248,6 +272,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
   /* Apply AppSettings */
   const onAppSettingsChange = (settings: App.AppSettings) => {
     applyAppSettings.theme(settings.theme)
+    applyAppSettings.themePalette(settings.themePalette)
+    applyAppSettings.fontScale(settings.fontScale)
     applyAppSettings.color(settings.color, settings.primaryColor, settings.secondaryColor)
     applyAppSettings.lang(settings.lang)
     applyAppSettings.fontFamily(settings.fontFamily)

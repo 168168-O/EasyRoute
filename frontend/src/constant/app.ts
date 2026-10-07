@@ -11,7 +11,6 @@ import {
   WebviewGpuPolicy,
   WindowStartState,
 } from '@/enums/app'
-import { APP_TITLE } from '@/utils'
 
 export const LocalesFilePath = 'data/locales'
 
@@ -144,13 +143,8 @@ export const DefaultPluginHubSources = () => [
   },
   {
     enable: true,
-    name: APP_TITLE,
-    url: `https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/${
-      {
-        'GUI.for.Clash': 'gfc',
-        'GUI.for.SingBox': 'gfs',
-      }[APP_TITLE]
-    }.json`,
+    name: '插件源',
+    url: 'https://raw.githubusercontent.com/GUI-for-Cores/Plugin-Hub/main/plugins/gfs.json',
   },
 ]
 
