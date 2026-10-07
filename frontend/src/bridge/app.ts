@@ -97,6 +97,17 @@ export const BackgroundVideoURL = async () => {
   return data as string
 }
 
+export const Translate = async (text: string, target: string) => {
+  const { flag, data } = await Bridge.Translate(text, target)
+  if (!flag) throw data
+  return JSON.parse(data) as {
+    text: string
+    sourceLang: string
+    targetLang: string
+    provider: string
+  }
+}
+
 export const Notify = async (title: string, body: string) => {
   if (!(await IsNotificationAvailable())) {
     throw new Error('Notifications not available on this platform')

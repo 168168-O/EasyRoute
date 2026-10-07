@@ -57,6 +57,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     dynamicBackground: true,
     backgroundVideo: '',
     appPrograms: [],
+    translateHistory: [],
     primaryColor: '#000',
     secondaryColor: '#545454',
     fontFamily: DefaultFontFamily,
@@ -196,6 +197,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     if (settings.dynamicBackground === undefined) settings.dynamicBackground = true
     if (settings.backgroundVideo === undefined) settings.backgroundVideo = ''
     if (!Array.isArray(settings.appPrograms)) settings.appPrograms = []
+    if (!Array.isArray(settings.translateHistory)) settings.translateHistory = []
+    settings.translateHistory = settings.translateHistory.slice(0, 20)
 
     app.value = settings
     latestUserSettings = stringify(app.value)

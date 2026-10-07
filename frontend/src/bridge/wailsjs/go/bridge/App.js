@@ -158,6 +158,10 @@ export function TcpPing(arg1, arg2) {
   return window['go']['bridge']['App']['TcpPing'](arg1, arg2);
 }
 
+export function Translate(arg1, arg2) {
+  return window['go']['bridge']['App']['Translate'](arg1, arg2);
+}
+
 export function TcpRequest(arg1, arg2, arg3) {
   return window['go']['bridge']['App']['TcpRequest'](arg1, arg2, arg3);
 }

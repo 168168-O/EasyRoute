@@ -40,6 +40,15 @@ export const installPreviewBridge = () => {
     ListDouyinExes: () => ok('[]'),
     PickFile: () => Promise.resolve({ flag: false, data: 'cancelled' }),
     BackgroundVideoURL: () => Promise.resolve({ flag: false, data: 'none' }),
+    Translate: (text, target) => {
+      const raw = String(text || '').trim()
+      if (!raw) return Promise.resolve({ flag: false, data: '请先输入要翻译的内容' })
+      const chinese = /[\u4e00-\u9fff]/.test(raw)
+      const chosen = String(target || 'auto')
+      const to = chosen !== 'auto' ? chosen : chinese ? 'en' : 'zh-Hans'
+      const translated = chinese ? `[en] ${raw}` : `[中文] ${raw}`
+      return ok(JSON.stringify({ text: translated, sourceLang: chinese ? 'zh-Hans' : 'en', targetLang: to, provider: 'bing' }))
+    },
     GetInterfaces: () => ok(''),
     GetSystemProxy: () => Promise.resolve({ flag: false, data: '' }),
     GetSystemProxyBypass: () => ok(''),
@@ -67,6 +76,8 @@ export const installPreviewBridge = () => {
           return () => Promise.resolve(false)
         }
         if (prop === 'WindowGetSize') return () => Promise.resolve({ w: 1280, h: 800 })
+        if (prop === 'ClipboardGetText') return () => Promise.resolve('Where is the station?')
+        if (prop === 'ClipboardSetText') return () => Promise.resolve()
         if (prop === 'WindowGetPosition') return () => Promise.resolve({ x: 0, y: 0 })
         return () => Promise.resolve()
       },

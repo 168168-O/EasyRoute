@@ -63,6 +63,14 @@ declare namespace App {
       exe: string
       mode: AppRouteMode
     }[]
+    translateHistory: {
+      id: string
+      input: string
+      output: string
+      from: string
+      to: string
+      at: number
+    }[]
     primaryColor: string
     secondaryColor: string
     fontFamily: string
