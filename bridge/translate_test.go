@@ -203,3 +203,114 @@ func TestTranslateEmptyAndTotalFailure(t *testing.T) {
 		t.Fatalf("error should be Chinese, got %v", err)
 	}
 }
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
+
+func googleResponse(status int, body string, hits *atomic.Int32) http.RoundTripper {
+	return roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		hits.Add(1)
+		return &http.Response{
+			StatusCode: status,
+			Body:       io.NopCloser(strings.NewReader(body)),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	})
+}
+
+func withGoogleSplit(base http.RoundTripper, google http.RoundTripper) http.RoundTripper {
+	return roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if strings.Contains(req.URL.Host, "googleapis") || strings.Contains(req.URL.Path, "translate_a") {
+			return google.RoundTrip(req)
+		}
+		return base.RoundTrip(req)
+	})
+}
+
+func TestGoogleUsesCoreProxyBeforeDirect(t *testing.T) {
+	var directGoogle, coreGoogle atomic.Int32
+	directSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "bing down", http.StatusBadGateway)
+	}))
+	defer directSrv.Close()
+
+	const googleBody = `[[["你好","Hello",null,null,1]],null,"en"]`
+	direct := &http.Client{Transport: withGoogleSplit(directSrv.Client().Transport, googleResponse(http.StatusOK, `[["bad"]]`, &directGoogle)), Timeout: 2 * time.Second}
+	core := &http.Client{Transport: googleResponse(http.StatusOK, googleBody, &coreGoogle), Timeout: 2 * time.Second}
+	engine := newTranslateEngine(direct, nil)
+	engine.core = core
+	engine.bingPages = []string{directSrv.URL + "/translator"}
+	engine.googleURL = "https://translate.googleapis.com/translate_a/single"
+
+	result, err := engine.Translate("Hello", "auto")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Text != "你好" || result.Provider != "google" {
+		t.Fatalf("result = %+v", result)
+	}
+	if coreGoogle.Load() == 0 {
+		t.Fatal("google was not sent through the core proxy")
+	}
+	if directGoogle.Load() != 0 {
+		t.Fatal("direct client was used for google while the core proxy succeeded")
+	}
+}
+
+func TestGoogleFallsBackToDirectWhenCoreProxyFails(t *testing.T) {
+	var directGoogle, coreGoogle atomic.Int32
+	directSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "bing down", http.StatusBadGateway)
+	}))
+	defer directSrv.Close()
+
+	const googleBody = `[[["你好","Hello",null,null,1]],null,"en"]`
+	direct := &http.Client{Transport: withGoogleSplit(directSrv.Client().Transport, googleResponse(http.StatusOK, googleBody, &directGoogle)), Timeout: 2 * time.Second}
+	core := &http.Client{Transport: googleResponse(http.StatusBadGateway, "down", &coreGoogle), Timeout: 2 * time.Second}
+	engine := newTranslateEngine(direct, nil)
+	engine.core = core
+	engine.bingPages = []string{directSrv.URL + "/translator"}
+	engine.googleURL = "https://translate.googleapis.com/translate_a/single"
+
+	result, err := engine.Translate("Hello", "auto")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Provider != "google" || result.Text != "你好" {
+		t.Fatalf("result = %+v", result)
+	}
+	if coreGoogle.Load() == 0 || directGoogle.Load() == 0 {
+		t.Fatalf("core=%d direct=%d", coreGoogle.Load(), directGoogle.Load())
+	}
+}
+
+func TestBingStaysDirectWhenCoreProxyIsSet(t *testing.T) {
+	var coreHits atomic.Int32
+	directSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/translator") {
+			_, _ = io.WriteString(w, bingPageHTML)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `[{"detectedLanguage":{"language":"en"},"translations":[{"text":"你好","to":"zh-Hans"}]}]`)
+	}))
+	defer directSrv.Close()
+
+	engine := newTranslateEngine(directSrv.Client(), nil)
+	engine.core = &http.Client{Transport: googleResponse(http.StatusBadGateway, "no", &coreHits), Timeout: 2 * time.Second}
+	engine.bingPages = []string{directSrv.URL + "/translator"}
+	engine.googleURL = "https://translate.googleapis.com/translate_a/single"
+
+	result, err := engine.Translate("Hello", "auto")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Provider != "bing" || result.Text != "你好" {
+		t.Fatalf("result = %+v", result)
+	}
+	if coreHits.Load() != 0 {
+		t.Fatalf("bing used the core proxy, hits=%d", coreHits.Load())
+	}
+}

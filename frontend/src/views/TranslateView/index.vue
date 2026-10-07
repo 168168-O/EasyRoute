@@ -3,11 +3,24 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { ClipboardGetText, ClipboardSetText, Translate } from '@/bridge'
-import { useAppSettingsStore } from '@/stores'
+import { useAppSettingsStore, useKernelApiStore } from '@/stores'
 import { message, sampleID } from '@/utils'
 
 const { t } = useI18n()
 const appSettings = useAppSettingsStore()
+const kernelApi = useKernelApiStore()
+
+const coreProxyURL = () => {
+  if (!kernelApi.running) return ''
+  const endpoint = kernelApi.getProxyEndpoint()
+  if (!endpoint || endpoint.schema !== 'http' || !endpoint.port) return ''
+  const host =
+    endpoint.host && endpoint.host !== '0.0.0.0' && endpoint.host !== '::' ? endpoint.host : '127.0.0.1'
+  const auth = endpoint.username
+    ? `${encodeURIComponent(endpoint.username)}:${encodeURIComponent(endpoint.password || '')}@`
+    : ''
+  return `http://${auth}${host}:${endpoint.port}`
+}
 
 const targets = [
   { value: 'auto', label: '自动' },
@@ -54,7 +67,7 @@ const runTranslate = async () => {
   busy.value = true
   errorText.value = ''
   try {
-    const result = await Translate(text, target.value)
+    const result = await Translate(text, target.value, coreProxyURL())
     output.value = result.text
     lastFrom.value = result.sourceLang || ''
     lastTo.value = result.targetLang || ''

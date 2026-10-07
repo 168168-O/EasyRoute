@@ -40,6 +40,7 @@ jobs:
     runs-on: windows-latest
     env:
       APP_NAME: 达货爱vpn姑娘
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -60,7 +61,41 @@ jobs:
           Write-Host "==> Building Windows amd64..."
           & "$env:USERPROFILE/go/bin/wails.exe" build -m -s -trimpath -skipbindings -devtools -o "$env:APP_NAME.exe"
           if (-not (Test-Path "build/bin/$env:APP_NAME.exe")) { throw "exe was not produced" }
-          Compress-Archive -Path "build/bin/$env:APP_NAME.exe" -DestinationPath "build/bin/$env:APP_NAME-windows-amd64.zip" -Force
+
+          $headers = @{
+            "User-Agent" = "dhagn-release"
+            "Accept" = "application/vnd.github+json"
+          }
+          if ($env:GITHUB_TOKEN) { $headers["Authorization"] = "Bearer $env:GITHUB_TOKEN" }
+          $release = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/SagerNet/sing-box/releases/latest"
+          $asset = @($release.assets) | Where-Object { $_.name -match '^sing-box-.+-windows-amd64\.zip$' } | Select-Object -First 1
+          if (-not $asset) { throw "sing-box windows-amd64 asset not found in $($release.tag_name)" }
+          Write-Host "==> Bundling $($asset.name)"
+          $download = Join-Path $env:TEMP $asset.name
+          Invoke-WebRequest -Headers $headers -Uri $asset.browser_download_url -OutFile $download
+          $extract = Join-Path $env:TEMP "sing-box-extract"
+          if (Test-Path $extract) { Remove-Item -Recurse -Force $extract }
+          Expand-Archive -Path $download -DestinationPath $extract -Force
+          $core = Get-ChildItem -Path $extract -Recurse -Filter "sing-box.exe" | Select-Object -First 1
+          if (-not $core) { throw "sing-box.exe missing inside $($asset.name)" }
+
+          $stage = "build/bin/stage"
+          if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
+          New-Item -ItemType Directory -Force -Path "$stage/data/sing-box" | Out-Null
+          Copy-Item "build/bin/$env:APP_NAME.exe" $stage
+          Copy-Item $core.FullName "$stage/data/sing-box/sing-box.exe"
+          & "$stage/data/sing-box/sing-box.exe" version
+          if (Test-Path "build/bin/$env:APP_NAME-windows-amd64.zip") {
+            Remove-Item -Force "build/bin/$env:APP_NAME-windows-amd64.zip"
+          }
+          Compress-Archive -Path "$stage/*" -DestinationPath "build/bin/$env:APP_NAME-windows-amd64.zip" -Force
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path "build/bin/$env:APP_NAME-windows-amd64.zip"))
+          $names = @($zip.Entries | ForEach-Object { $_.FullName })
+          $zip.Dispose()
+          Write-Host ($names -join "`n")
+          if (-not ($names | Where-Object { $_ -match 'sing-box\.exe' })) { throw "release zip is missing data/sing-box/sing-box.exe" }
+          if (-not ($names | Where-Object { $_ -match [regex]::Escape($env:APP_NAME) })) { throw "release zip is missing the app exe" }
 
       - uses: actions/upload-artifact@v6
         with:

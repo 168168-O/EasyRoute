@@ -34,6 +34,7 @@ const restartApp = async (admin = false) => {
 const onPermChange = async (v: boolean) => {
   try {
     await SwitchPermissions(v)
+    appSettings.app.preferRunAsAdmin = v
     if (v !== envStore.env.isPrivileged) {
       const ok = await confirm('Notice', 'Restart the application now?').catch(() => 0)
       ok && (await restartApp(v))

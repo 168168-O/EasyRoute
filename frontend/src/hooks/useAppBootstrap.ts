@@ -1,8 +1,9 @@
 import { ref } from 'vue'
 
 import { IsStartup } from '@/bridge'
+import { OS } from '@/enums/app'
 import * as Stores from '@/stores'
-import { message, sleep } from '@/utils'
+import { CheckPermissions, SwitchPermissions, message, sleep } from '@/utils'
 
 const MIN_SPLASH_DURATION = 1000
 
@@ -36,6 +37,11 @@ export const useAppBootstrap = () => {
       pluginsStore.setupPlugins(),
       scheduledTasksStore.setupScheduledTasks(),
     ])
+
+    if (envStore.env.os === OS.Windows && appSettings.app.preferRunAsAdmin) {
+      const enabled = await CheckPermissions().catch(() => false)
+      if (!enabled) await SwitchPermissions(true).catch((error) => console.error(error))
+    }
 
     const startTime = performance.now()
     percent.value = 20
