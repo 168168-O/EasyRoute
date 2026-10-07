@@ -166,7 +166,7 @@ const preview = (text: string) => (text.length > 42 ? text.slice(0, 42) + '…' 
         <span>{{ t('translate.source') }}</span>
         <textarea v-model="input" class="tr-box" :placeholder="t('translate.sourcePh')" />
       </label>
-      <button type="button" class="tr-swap" :title="t('translate.swap')" @click="swap">⇄</button>
+      <button type="button" class="tr-swap glass-ring" :title="t('translate.swap')" @click="swap">⇄</button>
       <label class="tr-pane">
         <span>
           {{ t('translate.result') }}

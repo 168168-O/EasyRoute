@@ -274,17 +274,6 @@ body {
   box-shadow: 0 0 10px #a774ff, 0 0 26px rgba(150, 90, 255, 0.8);
 }
 
-#app .gui-radio.tone-gold .gui-radio-button.active {
-  color: var(--on-accent) !important;
-  text-shadow: none;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--accent) 35%, #fff) 0%,
-    var(--accent) 45%,
-    color-mix(in srgb, var(--accent) 72%, #000) 100%
-  ) !important;
-  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.95), 0 0 26px rgba(var(--accent-rgb), 0.7);
-}
 
 #app .gui-switch {
   width: 66px;
@@ -302,10 +291,6 @@ body {
   background: radial-gradient(circle at 35% 30%, #fff, #e9edf5 55%, #b9c1cf) !important;
 }
 
-#app .gui-switch.on {
-  background: linear-gradient(180deg, #8ed6ff 0%, #2e95ff 50%, #0a4fe0 100%) !important;
-  box-shadow: inset 0 0 0 1.4px #c9ecff, 0 0 12px #3fb0ff, 0 0 30px rgba(40, 150, 255, 0.8);
-}
 
 #app .gui-switch.on .dot {
   left: 38px !important;
@@ -354,9 +339,6 @@ body[theme-mode='light'] #app .main-nav__button.is-active {
   color: #fff !important;
 }
 
-body[theme-mode='light'] #app .gui-radio.tone-gold .gui-radio-button.active {
-  color: var(--on-accent) !important;
-}
 
 /* Theme strip */
 .themes {
@@ -427,15 +409,13 @@ html[data-font='xlarge'] .themes .t { border-radius: 999px; }
 .step { display: inline-flex; align-items: center; gap: 6px; }
 .step i {
   font-style: normal;
-  width: 19px;
-  height: 19px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   font-size: 12px;
   font-weight: 800;
-  color: var(--on-accent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 40%, #fff), var(--accent));
 }
 .status {
   font-size: 13px;
@@ -665,7 +645,8 @@ body[theme-mode='light'] .tr-select {
 }
 body[theme-mode='light'] .tr-error { color: #9d1c1c; }
 
-/* Frosted primary actions: translucent fill, 2px three-color ring, cheap angle spin. */
+/* One frosted ring for every gold/accent-filled control. The angle lives on
+   the element so the 6s spin stays a single cheap custom-property animation. */
 @property --ring-angle {
   syntax: '<angle>';
   initial-value: 0deg;
@@ -676,13 +657,22 @@ body[theme-mode='light'] .tr-error { color: #9d1c1c; }
   to { --ring-angle: 360deg; }
 }
 
-#app .gui-button.primary,
-.btn.add,
-.pill-btn,
-.tr-swap {
+:is(
+  .glass-ring,
+  #app .gui-button.primary,
+  .btn.add,
+  .pill-btn,
+  .tr-swap,
+  #app .gui-radio.tone-gold .gui-radio-button.active,
+  #app .gui-checkbox-button.active,
+  #app .gui-switch.on,
+  #app .gui-tag.color-primary,
+  .step > i
+) {
   --ring-angle: 0deg;
   position: relative;
   z-index: 0;
+  box-sizing: border-box;
   color: #fff !important;
   border: 2px solid transparent !important;
   background:
@@ -699,10 +689,17 @@ body[theme-mode='light'] .tr-error { color: #9d1c1c; }
   text-shadow: 0 1px 2px rgba(0, 12, 40, 0.65);
 }
 
-#app .gui-button.primary:hover,
-.btn.add:hover,
-.pill-btn:hover,
-.tr-swap:hover {
+:is(
+  .glass-ring,
+  #app .gui-button.primary,
+  .btn.add,
+  .pill-btn,
+  .tr-swap,
+  #app .gui-radio.tone-gold .gui-radio-button.active,
+  #app .gui-checkbox-button.active,
+  #app .gui-switch.on,
+  #app .gui-tag.color-primary
+):hover {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.46), rgba(12, 28, 58, 0.22)) padding-box,
     conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box !important;
@@ -712,37 +709,68 @@ body[theme-mode='light'] .tr-error { color: #9d1c1c; }
     0 0 34px rgba(var(--accent-2-rgb), 0.42);
 }
 
-#app .gui-button.primary:active,
-.btn.add:active,
-.pill-btn:active,
-.tr-swap:active {
+:is(
+  .glass-ring,
+  #app .gui-button.primary,
+  .btn.add,
+  .pill-btn,
+  .tr-swap,
+  #app .gui-switch.on
+):active {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(8, 18, 42, 0.42)) padding-box,
     conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box !important;
 }
 
-body[theme-mode='light'] #app .gui-button.primary,
-body[theme-mode='light'] .btn.add,
-body[theme-mode='light'] .pill-btn,
-body[theme-mode='light'] .tr-swap {
+body[theme-mode='light'] :is(
+  .glass-ring,
+  #app .gui-button.primary,
+  .btn.add,
+  .pill-btn,
+  .tr-swap,
+  #app .gui-radio.tone-gold .gui-radio-button.active,
+  #app .gui-checkbox-button.active,
+  #app .gui-switch.on,
+  #app .gui-tag.color-primary,
+  .step > i
+) {
   color: #fff !important;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(18, 28, 52, 0.48)) padding-box,
     conic-gradient(from var(--ring-angle), var(--accent), var(--accent-2), var(--accent-3), var(--accent)) border-box !important;
 }
 
+.tr-swap.glass-ring,
+.glass-ring.rounded-full {
+  border-radius: 999px;
+  padding: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  #app .gui-button.primary,
-  .btn.add,
-  .pill-btn,
-  .tr-swap {
+  :is(
+    .glass-ring,
+    #app .gui-button.primary,
+    .btn.add,
+    .pill-btn,
+    .tr-swap,
+    #app .gui-radio.tone-gold .gui-radio-button.active,
+    #app .gui-checkbox-button.active,
+    #app .gui-switch.on,
+    #app .gui-tag.color-primary,
+    .step > i
+  ) {
     animation: none;
   }
 }
 
-body[feature-no-animation='true'] #app .gui-button.primary,
-body[feature-no-animation='true'] .btn.add,
-body[feature-no-animation='true'] .pill-btn,
-body[feature-no-animation='true'] .tr-swap {
+body[feature-no-animation='true'] :is(
+  .glass-ring,
+  #app .gui-button.primary,
+  .btn.add,
+  .pill-btn,
+  .tr-swap,
+  #app .gui-switch.on,
+  .step > i
+) {
   animation: none !important;
 }
