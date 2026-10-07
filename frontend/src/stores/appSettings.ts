@@ -73,7 +73,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     height: 0,
     exitOnClose: true,
     closeKernelOnExit: true,
-    autoSetSystemProxy: true,
+    autoSetSystemProxy: false,
     autoSetSystemDNS: false,
     requestProxyMode: RequestProxyMode.System,
     customProxy: '',
@@ -171,6 +171,13 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       settings.preferRunAsAdmin = true
     } else if (settings.preferRunAsAdmin === undefined) {
       settings.preferRunAsAdmin = false
+    }
+    // TUN already captures traffic, so new installs leave the system proxy off.
+    // A saved true or false in an existing user.yaml is kept.
+    if (!data) {
+      settings.autoSetSystemProxy = false
+    } else if (settings.autoSetSystemProxy === undefined) {
+      settings.autoSetSystemProxy = true
     }
     if (settings.systemProxyDNS === undefined) {
       settings.systemProxyDNS = ''

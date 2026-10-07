@@ -267,45 +267,57 @@ test('proxy process dns uses fakeip only for public A/AAAA queries', () => {
   assert.equal(dns({ processName: 'douyin.exe', domain: 'www.google.com', queryType: 'AAAA' }), 'dhagn-local-dns')
 })
 
-test('mixed and http inbound traffic goes proxy without changing TUN routing', () => {
+test('only this app on the mixed inbound goes proxy; other programs follow TUN rules', () => {
+  const appPath = String.raw`C:\达货爱vpn姑娘\达货爱vpn姑娘.exe`
   const base = sampleBaseConfig()
   base.inbounds.push({ type: 'http', tag: 'http-in', listen: '127.0.0.1', listen_port: 20123 })
   const routed = applyAppRouting(base, {
     programs,
     proxyOutbound: 'proxy',
     directOutbound: 'direct',
+    appPath,
   })
   const rules = routed.route.rules as Record<string, unknown>[]
   const indexOf = (pred: (rule: Record<string, unknown>) => boolean) => rules.findIndex(pred)
-  const wechat = indexOf((rule) => names(rule.process_name).includes('Weixin.exe'))
-  const douyin = indexOf((rule) => names(rule.process_name).includes('douyin.exe'))
-  const inbound = indexOf((rule) => names(rule.inbound).includes('mixed-in') && rule.outbound === 'proxy')
+  const wechat = indexOf((rule) => names(rule.process_name).includes('Weixin.exe') && !rule.inbound)
+  const douyin = indexOf((rule) => names(rule.process_name).includes('douyin.exe') && !rule.inbound)
+  const byPath = indexOf((rule) => names(rule.process_path).includes(appPath))
+  const byName = indexOf(
+    (rule) => names(rule.process_name).includes('达货爱vpn姑娘.exe') && !!rule.inbound,
+  )
   const catchAll = indexOf((rule) => rule.process_path_regex === '.+' && rule.outbound === 'direct')
-  assert.ok(wechat >= 0 && douyin > wechat && inbound > douyin && catchAll > inbound)
-  assert.ok(names(rules[inbound]?.inbound).includes('http-in'))
-  assert.equal(names(rules[inbound]?.inbound).includes('tun-in'), false)
-
-  const app = {
-    processName: '达货爱vpn姑娘.exe',
-    processPath: String.raw`C:\达货爱vpn姑娘\达货爱vpn姑娘.exe`,
-  }
-  assert.equal(matchOutbound(rules, { ...app, inbound: 'mixed-in', clashMode: 'global' }), 'proxy')
-  assert.equal(matchOutbound(rules, { ...app, inbound: 'http-in', clashMode: 'rule' }), 'proxy')
-  assert.equal(matchOutbound(rules, { ...app, inbound: 'tun-in', clashMode: 'global' }), 'direct')
+  assert.ok(wechat >= 0 && douyin > wechat && byPath > douyin && byName > byPath && catchAll > byName)
+  assert.deepEqual(names(rules[byPath]?.inbound), ['mixed-in', 'http-in'])
+  assert.equal(rules[byPath]?.outbound, 'proxy')
+  assert.equal(rules[byName]?.outbound, 'proxy')
   assert.equal(
-    matchOutbound(rules, { processName: 'notepad.exe', inbound: 'tun-in', clashMode: 'global' }),
+    rules.some((rule) => rule.inbound && rule.outbound === 'proxy' && !rule.process_path && !rule.process_name),
+    false,
+  )
+
+  const via = (processName: string, processPath: string, inbound = 'mixed-in') =>
+    matchOutbound(rules, { processName, processPath, inbound, clashMode: 'global' })
+
+  assert.equal(via('notepad.exe', String.raw`C:\Windows\notepad.exe`), 'direct')
+  assert.equal(
+    via('msedge.exe', String.raw`C:\Program Files\Microsoft\Edge\Application\msedge.exe`),
     'direct',
   )
   assert.equal(
-    matchOutbound(rules, { processName: 'chrome.exe', inbound: 'tun-in', clashMode: 'global' }),
+    via('chrome.exe', String.raw`C:\Program Files\Google\Chrome\Application\chrome.exe`),
+    'proxy',
+  )
+  assert.equal(via('Weixin.exe', String.raw`C:\Program Files\Tencent\Weixin\Weixin.exe`), 'direct')
+  assert.equal(via('douyin.exe', String.raw`C:\Program Files\ByteDance\douyin\douyin.exe`, 'http-in'), 'direct')
+  assert.equal(via('达货爱vpn姑娘.exe', appPath), 'proxy')
+  assert.equal(via('达货爱vpn姑娘.exe', appPath, 'http-in'), 'proxy')
+  assert.equal(via('达货爱vpn姑娘.exe', appPath, 'tun-in'), 'direct')
+  assert.equal(
+    matchOutbound(rules, { processName: '达货爱vpn姑娘.exe', inbound: 'mixed-in', clashMode: 'rule' }),
     'proxy',
   )
   assert.equal(
-    matchOutbound(rules, { processName: 'Weixin.exe', inbound: 'mixed-in', clashMode: 'global' }),
-    'direct',
-  )
-  assert.equal(
-    matchOutbound(rules, { processName: 'douyin.exe', inbound: 'http-in', clashMode: 'global' }),
+    matchOutbound(rules, { processName: 'notepad.exe', inbound: 'http-in', clashMode: 'rule' }),
     'direct',
   )
   assert.equal(
@@ -317,11 +329,12 @@ test('mixed and http inbound traffic goes proxy without changing TUN routing', (
     programs,
     proxyOutbound: 'proxy',
     directOutbound: 'direct',
+    appPath,
   })
-  const inboundRules = (twice.route.rules as Record<string, unknown>[]).filter((rule) =>
-    names(rule.inbound).includes('mixed-in'),
+  const inboundRules = (twice.route.rules as Record<string, unknown>[]).filter(
+    (rule) => names(rule.inbound).includes('mixed-in') && rule.outbound === 'proxy',
   )
-  assert.equal(inboundRules.length, 1)
+  assert.equal(inboundRules.length, 2)
 })
 
 test('GeoSite-CN is kept on local dns and geolocation-!cn is not rewritten', () => {

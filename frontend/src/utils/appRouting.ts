@@ -21,6 +21,8 @@ export interface AppRoutingOptions {
   extraDirectExes?: string[]
   proxyOutbound?: string
   directOutbound?: string
+  /** Full path of this app, from envStore.env.appPath. */
+  appPath?: string
 }
 
 export const WECHAT_PROCESSES = [
@@ -70,6 +72,10 @@ export const LOCAL_DNS_TAG = 'dhagn-local-dns'
 const DIRECT_PROCESS_CATCHALL = '.+'
 
 const lower = (value: string) => value.trim().toLowerCase()
+
+const normalizePath = (value: string) => lower(value).replaceAll('/', '\\')
+
+const appExeName = (appPath: string) => appPath.trim().split(/[/\\]/).pop() || ''
 
 export const isPinnedExe = (exe: string) => {
   const name = lower(exe)
@@ -154,6 +160,7 @@ export const matchOutbound = (rules: Record<string, unknown>[], query: Connectio
       if (!query.inbound || !tags.includes(query.inbound)) continue
       const hasMore =
         rule.process_name ||
+        rule.process_path ||
         rule.process_path_regex ||
         rule.domain_suffix ||
         rule.ip_is_private === true ||
@@ -164,6 +171,13 @@ export const matchOutbound = (rules: Record<string, unknown>[], query: Connectio
 
     if (rule.process_name && query.processName) {
       if (nameHit(rule, query.processName)) return rule.outbound as string | undefined
+      continue
+    }
+    if (rule.process_path) {
+      const target = query.processPath || ''
+      if (!target) continue
+      const wanted = asList(rule.process_path).map((item) => normalizePath(String(item)))
+      if (wanted.includes(normalizePath(target))) return rule.outbound as string | undefined
       continue
     }
     if (rule.process_path_regex) {
@@ -381,6 +395,7 @@ const buildPrefix = (
   proxyOutbound: string,
   directOutbound: string,
   proxyInboundTags: string[],
+  appPath: string,
 ) => {
   const pinned = unique([...WECHAT_PROCESSES, ...DOUYIN_PROCESSES, ...extraDirectExes])
   const pinnedSet = new Set(pinned.map(lower))
@@ -423,11 +438,25 @@ const buildPrefix = (
     rules.push({ action: 'route', process_name: proxyExes, outbound: proxyOutbound })
   }
 
-  // The app's own Google fallback arrives on the mixed/http inbound and is
-  // identified as this process. That would hit the catch-all below and go
-  // direct. TUN traffic uses a different inbound, so it is unchanged.
-  if (proxyInboundTags.length) {
-    rules.push({ action: 'route', inbound: [...proxyInboundTags], outbound: proxyOutbound })
+  // Only this app's own requests on the mixed/http inbound go to the proxy
+  // (the Google fallback). Every other program on that inbound follows the
+  // same per-app rules as TUN. process_name covers a missing process path.
+  const exe = appExeName(appPath)
+  if (proxyInboundTags.length && appPath.trim()) {
+    rules.push({
+      action: 'route',
+      inbound: [...proxyInboundTags],
+      process_path: [appPath],
+      outbound: proxyOutbound,
+    })
+    if (exe) {
+      rules.push({
+        action: 'route',
+        inbound: [...proxyInboundTags],
+        process_name: [exe],
+        outbound: proxyOutbound,
+      })
+    }
   }
 
   // Any remaining program (unlisted, or explicitly 走本地) stays on the local network.
@@ -463,6 +492,7 @@ export const applyAppRouting = (config: Record<string, any>, options: AppRouting
     proxyOutbound,
     directOutbound,
     proxyInboundTags,
+    options.appPath || '',
   )
 
   const route = (config.route = config.route || {})

@@ -33,6 +33,7 @@ const checkedConfig = (mode: 'rule' | 'global') => {
     extraDirectExes: ['douyin_extra.exe'],
     proxyOutbound: 'proxy',
     directOutbound: 'direct',
+    appPath: String.raw`C:\达货爱vpn姑娘\达货爱vpn姑娘.exe`,
   })
 }
 
