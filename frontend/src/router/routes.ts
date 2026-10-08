@@ -31,16 +31,6 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/translate',
-    name: 'Translate',
-    component: TranslateView,
-    meta: {
-      name: 'router.translate',
-      icon: 'translate',
-      hidden: false,
-    },
-  },
-  {
     path: '/profiles',
     name: 'Profiles',
     component: ProfilesView,
@@ -92,6 +82,16 @@ const routes: RouteRecordRaw[] = [
     meta: {
       name: 'router.settings',
       icon: 'settings2',
+      hidden: false,
+    },
+  },
+  {
+    path: '/translate',
+    name: 'Translate',
+    component: TranslateView,
+    meta: {
+      name: 'router.translate',
+      icon: 'translate',
       hidden: false,
     },
   },
