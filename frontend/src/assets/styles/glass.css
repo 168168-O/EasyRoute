@@ -569,6 +569,86 @@ body:not([theme-mode='light']) #app .font-bold {
   font-size: 13px;
 }
 
+.network-check .nc-tools,
+.network-check .nc-lookup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.network-check .nc-lookup {
+  margin-top: 8px;
+}
+
+.network-check .nc-link {
+  font-size: 13px;
+  padding: 6px 12px;
+}
+
+.network-check .nc-input {
+  flex: 1;
+  min-width: 160px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #2e6f9a;
+  background: #0c1622;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+
+.network-check .nc-routes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.sub-status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #2e6f9a;
+  background: #0c1622;
+}
+
+.sub-warn {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e2b340;
+  background: #3a2a08;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.sub-name {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sub-value,
+.sub-idle {
+  color: #c5d0dc;
+  font-size: 13px;
+}
+
+.sub-idle {
+  margin: 0;
+}
+
 .network-check .nc-list,
 .network-check .nc-sites {
   display: flex;
@@ -618,9 +698,25 @@ body:not([theme-mode='light']) #app .font-bold {
 .nc-dot.amber { background: #e2b340; }
 .nc-dot.red { background: #e25b5b; }
 
-body[theme-mode='light'] .network-check .nc-name { color: #142033; }
+body[theme-mode='light'] .network-check .nc-name,
+body[theme-mode='light'] .sub-name { color: #142033; }
 body[theme-mode='light'] .network-check .nc-value,
-body[theme-mode='light'] .network-check .nc-idle { color: #3c4c60; }
+body[theme-mode='light'] .network-check .nc-idle,
+body[theme-mode='light'] .sub-value,
+body[theme-mode='light'] .sub-idle { color: #3c4c60; }
+body[theme-mode='light'] .network-check .nc-input {
+  background: #fff;
+  color: #142033;
+  border-color: #8fb4d4;
+}
+body[theme-mode='light'] .sub-status {
+  background: #fff;
+  border-color: #8fb4d4;
+}
+body[theme-mode='light'] .sub-warn {
+  background: #ffe7b0;
+  color: #142033;
+}
 
 #app .gui-button,
 #app .main-nav__button,

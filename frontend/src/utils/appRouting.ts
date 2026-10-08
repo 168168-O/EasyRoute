@@ -31,6 +31,11 @@ export interface AppRoutingOptions {
    * A saved 走代理 is never rewritten to 走本地 here.
    */
   pinnedRoutes?: Partial<PinnedRoutes> | null
+  /**
+   * When true (the default), geosite-cn / geoip-cn from programs set to 走代理
+   * goes direct. WeChat and Douyin are not in that list.
+   */
+  domesticDirect?: boolean
   proxyOutbound?: string
   directOutbound?: string
   /** Full path of this app, from envStore.env.appPath. */
@@ -137,6 +142,8 @@ export interface ConnectionQuery {
   processName?: string
   processPath?: string
   domain?: string
+  /** A rule_set tag the connection already matched, such as geosite-cn. */
+  ruleSet?: string
   ipIsPrivate?: boolean
   inbound?: string
   clashMode?: 'global' | 'rule' | 'direct'
@@ -198,8 +205,13 @@ export const matchOutbound = (rules: Record<string, unknown>[], query: Connectio
     }
 
     if (rule.process_name && query.processName) {
-      if (nameHit(rule, query.processName)) return rule.outbound as string | undefined
-      continue
+      if (!nameHit(rule, query.processName)) continue
+      if (rule.rule_set) {
+        const tags = asList(rule.rule_set).map(lower)
+        const wanted = lower(query.ruleSet || '')
+        if (!wanted || !tags.includes(wanted)) continue
+      }
+      return rule.outbound as string | undefined
     }
     if (rule.process_path) {
       const target = query.processPath || ''
@@ -382,11 +394,28 @@ const isCnGeosite = (tag: string) => {
   return /(^|[^a-z])cn([^a-z]|$)/.test(value)
 }
 
-const collectCnGeositeTags = (config: Record<string, any>) => {
+const isCnGeoip = (tag: string) => {
+  const value = tag.toLowerCase()
+  if (!value || value.includes('!')) return false
+  if (!/geo[-_]?ip/.test(value)) return false
+  return /(^|[^a-z])cn([^a-z]|$)/.test(value)
+}
+
+const isCnRouteTag = (tag: string) => isCnGeosite(tag) || isCnGeoip(tag)
+
+const isInjectedDomesticRule = (rule: Record<string, unknown>) => {
+  if (!rule || rule.action !== 'route' || rule.inbound || rule.clash_mode) return false
+  if (!rule.process_name || !rule.rule_set) return false
+  if (rule.domain_suffix || rule.process_path || rule.process_path_regex) return false
+  if (asList(rule.process_name).some((name) => isPinnedExe(name))) return false
+  return asList(rule.rule_set).every((tag) => isCnRouteTag(tag))
+}
+
+const collectCnRouteTags = (config: Record<string, any>) => {
   const tags: string[] = []
   const push = (value: unknown) => {
     for (const tag of asList(value)) {
-      if (!isCnGeosite(tag)) continue
+      if (!isCnRouteTag(tag)) continue
       if (tags.some((item) => lower(item) === lower(tag))) continue
       tags.push(tag)
     }
@@ -396,7 +425,7 @@ const collectCnGeositeTags = (config: Record<string, any>) => {
     ...((config.route?.rules || []) as Record<string, any>[]),
   ]
   for (const rule of rules) {
-    if (rule && typeof rule === 'object') push(rule.rule_set)
+    if (rule && typeof rule === 'object' && !isInjectedDomesticRule(rule)) push(rule.rule_set)
   }
   const sets = config.route?.rule_set
   if (Array.isArray(sets)) {
@@ -436,6 +465,8 @@ const buildPrefix = (
   directOutbound: string,
   proxyInboundTags: string[],
   appPath: string,
+  domesticDirect: boolean,
+  cnRouteTags: string[],
 ) => {
   const wechat = unique(WECHAT_PROCESSES)
   const extraDouyin = unique(extraDirectExes).filter(
@@ -495,6 +526,16 @@ const buildPrefix = (
       protocol: 'dns',
       process_name: dnsProxyExes,
     })
+  }
+  if (domesticDirect && proxyExes.length) {
+    for (const tag of cnRouteTags) {
+      rules.push({
+        action: 'route',
+        process_name: [...proxyExes],
+        rule_set: tag,
+        outbound: directOutbound,
+      })
+    }
   }
   if (proxyExes.length) {
     rules.push({ action: 'route', process_name: proxyExes, outbound: proxyOutbound })
@@ -601,6 +642,8 @@ export const applyAppRouting = (config: Record<string, any>, options: AppRouting
   const programs = options.programs || []
   const extraDirectExes = options.extraDirectExes || []
   const pinnedRoutes = normalizePinnedRoutes(options.pinnedRoutes)
+  const domesticDirect = options.domesticDirect !== false
+  const cnRouteTags = domesticDirect ? collectCnRouteTags(config) : []
   const proxyOutbound = findProxyOutbound(config, options.proxyOutbound)
   const directOutbound = findDirectOutbound(config, options.directOutbound)
   ensureDirectOutbound(config, directOutbound)
@@ -615,13 +658,17 @@ export const applyAppRouting = (config: Record<string, any>, options: AppRouting
     directOutbound,
     proxyInboundTags,
     options.appPath || '',
+    domesticDirect,
+    cnRouteTags,
   )
   const { rules: prefix, proxyExes, directExes, douyinNames, pinnedDirectExes, dnsProxyExes, directDomains, proxyDomains } =
     built
 
   const route = (config.route = config.route || {})
   const existing = (Array.isArray(route.rules) ? route.rules : []) as Record<string, unknown>[]
-  const withoutPinned = existing.filter((rule) => !isPinnedRouteRule(rule, douyinNames))
+  const withoutPinned = existing.filter(
+    (rule) => !isPinnedRouteRule(rule, douyinNames) && !isInjectedDomesticRule(rule),
+  )
   const merged = [...prefix, ...stripInjected(withoutPinned, prefix)]
   // Connections with no process path skip every process rule and would otherwise
   // hit clash_mode global → proxy. Send those to direct. Named 走代理 processes
@@ -639,7 +686,7 @@ export const applyAppRouting = (config: Record<string, any>, options: AppRouting
   const localDns = LOCAL_DNS_TAG
   const remoteDns = findRemoteDns(config)
   const fakeIpDns = findFakeIpDns(config)
-  const cnTags = collectCnGeositeTags(config)
+  const cnTags = collectCnRouteTags(config).filter((tag) => isCnGeosite(tag))
   const dnsRulesBefore = (Array.isArray(config.dns?.rules) ? config.dns.rules : []) as Record<string, any>[]
   const localServerFor = (tag: string) => {
     const current = dnsRulesBefore.find((rule) => asList(rule.rule_set).some((item) => lower(item) === lower(tag)))
@@ -690,6 +737,96 @@ export const applyAppRouting = (config: Record<string, any>, options: AppRouting
   if (remoteDns) dns.final = remoteDns
 
   return config
+}
+
+const CN_DOMAIN_SUFFIXES = [
+  'baidu.com',
+  'taobao.com',
+  'tmall.com',
+  'jd.com',
+  'bilibili.com',
+  '163.com',
+  '126.com',
+  'weibo.com',
+  'aliyun.com',
+  'alipay.com',
+  'csdn.net',
+  'zhihu.com',
+  'iqiyi.com',
+  'youku.com',
+  'sohu.com',
+  '360.cn',
+  'mi.com',
+  'xiaomi.com',
+  'huawei.com',
+  'toutiao.com',
+]
+
+const hostOf = (input: string) => {
+  const trimmed = input.trim()
+  if (!trimmed) return ''
+  try {
+    if (trimmed.includes('://')) return new URL(trimmed).hostname.toLowerCase()
+  } catch {
+    return ''
+  }
+  return trimmed.split('/')[0]?.split(':')[0]?.toLowerCase() || ''
+}
+
+const hostMatches = (host: string, suffixes: readonly string[]) => {
+  const value = host.replace(/\.$/, '')
+  return suffixes.some((suffix) => {
+    const item = suffix.toLowerCase()
+    return value === item || value.endsWith('.' + item)
+  })
+}
+
+const isCnHost = (host: string) =>
+  host === 'cn' || host.endsWith('.cn') || hostMatches(host, CN_DOMAIN_SUFFIXES)
+
+export interface RouteExplanation {
+  scope: string
+  route: AppRouteMode
+  rule: string
+}
+
+/** Which route a domain would take. WeChat and Douyin stay on their saved rules. */
+export const explainDomainRoute = (
+  input: string,
+  options: { pinned?: Partial<PinnedRoutes> | null; domesticDirect?: boolean } = {},
+): RouteExplanation[] => {
+  const host = hostOf(input)
+  if (!host || /^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return []
+  const pinned = normalizePinnedRoutes(options.pinned)
+  const domestic = options.domesticDirect !== false
+  if (hostMatches(host, WECHAT_DOMAIN_SUFFIXES)) {
+    return [
+      { scope: '微信', route: pinned.wechat, rule: '微信固定规则' },
+      { scope: '其他程序', route: pinned.wechat, rule: '微信域名' },
+    ]
+  }
+  if (hostMatches(host, DOUYIN_DOMAIN_SUFFIXES)) {
+    return [
+      { scope: '抖音', route: pinned.douyin, rule: '抖音固定规则' },
+      { scope: '其他程序', route: pinned.douyin, rule: '抖音域名' },
+    ]
+  }
+  if (isCnHost(host) && domestic) {
+    return [
+      { scope: '走代理的程序', route: 'direct', rule: '国内网站走本地' },
+      { scope: '其他程序', route: 'direct', rule: '国内网站' },
+    ]
+  }
+  if (isCnHost(host)) {
+    return [
+      { scope: '走代理的程序', route: 'proxy', rule: '进程走代理' },
+      { scope: '其他程序', route: 'direct', rule: '国内网站' },
+    ]
+  }
+  return [
+    { scope: '走代理的程序', route: 'proxy', rule: '进程走代理' },
+    { scope: '其他程序', route: 'direct', rule: '未列出的程序走本地' },
+  ]
 }
 
 /** A small fake profile used by tests and the sample config in the pull request. */

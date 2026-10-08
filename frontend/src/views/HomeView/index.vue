@@ -10,6 +10,7 @@ import { APP_TITLE, debounce, message, modal } from '@/utils'
 import GroupsController from './components/GroupsController.vue'
 import KernelLogs from './components/KernelLogs.vue'
 import NetworkCheck from './components/NetworkCheck.vue'
+import SubscriptionStatus from './components/SubscriptionStatus.vue'
 import OverView from './components/OverView.vue'
 import QuickStart from './components/QuickStart.vue'
 
@@ -154,6 +155,7 @@ watch(showController, (v) => {
         </Button>
       </template>
       <div class="network-check-slot w-full mt-16 px-16">
+        <SubscriptionStatus />
         <NetworkCheck />
       </div>
     </div>

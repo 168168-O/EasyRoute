@@ -155,6 +155,7 @@ const liveConfig = (mode: 'rule' | 'global', pinnedRoutes: PinnedRoutes) => {
     'qq.com': [DEST],
     'douyin.com': [DEST],
     'example.com': [DEST],
+    'baidu.cn': [DEST],
   }
   for (const server of config.dns.servers as Record<string, unknown>[]) {
     if (server.tag === 'dhagn-local-dns' || server.tag === 'Remote-DNS' || server.tag === 'Local-DNS') {
@@ -265,6 +266,7 @@ const cases: {
       { bin: 'notepad.exe', url: `http://weixin.qq.com:${HTTP_PORT}/`, socks: false },
       { bin: 'notepad.exe', url: `http://douyin.com:${HTTP_PORT}/`, socks: false },
       { bin: 'chrome.exe', url: `http://example.com:${HTTP_PORT}/`, socks: true },
+      { bin: 'chrome.exe', url: `http://baidu.cn:${HTTP_PORT}/`, socks: false },
     ],
   },
   {

@@ -4,7 +4,38 @@ export const installPreviewBridge = () => {
   const runtime = (window as Window & { runtime?: { EventsOn?: unknown } }).runtime
   if (runtime?.EventsOn) return
 
-  const files: Record<string, string> = {}
+  const files: Record<string, string> = {
+    'data/subscribes.yaml': [
+      '- id: preview-sub',
+      '  name: 预览订阅',
+      '  upload: 50000000000',
+      '  download: 45000000000',
+      '  total: 100000000000',
+      '  expire: 1791676800000',
+      '  updateTime: 0',
+      '  type: Http',
+      '  url: https://example.invalid/sub',
+      '  website: ""',
+      '  path: data/subscribes/preview-sub.json',
+      '  include: ""',
+      '  exclude: ""',
+      '  includeProtocol: ""',
+      '  excludeProtocol: ""',
+      '  proxyPrefix: ""',
+      '  requestProxyMode: system',
+      '  customProxy: ""',
+      '  disabled: false',
+      '  inSecure: false',
+      '  proxies: []',
+      '  requestMethod: GET',
+      '  requestTimeout: 15',
+      '  header:',
+      '    request: {}',
+      '    response: {}',
+      '  script: ""',
+      '',
+    ].join('\n'),
+  }
   const ok = (data?: unknown) => Promise.resolve({ flag: true, data: data == null ? '' : String(data) })
   const processes = [
     { name: 'Google Chrome', exe: 'chrome.exe' },
@@ -112,6 +143,9 @@ export const installPreviewBridge = () => {
         return { flag: false, data: '翻译失败：连不上翻译服务。请检查网络后再试。' }
       }
     },
+    ExportBackup: () => ok('预览环境：备份已准备'),
+    RestoreBackup: () => ok('已恢复，请重启软件'),
+    AutoBackup: () => ok('preview'),
     GetInterfaces: () => ok(''),
     GetSystemProxy: () => Promise.resolve({ flag: false, data: '' }),
     GetSystemProxyBypass: () => ok(''),
@@ -141,6 +175,12 @@ export const installPreviewBridge = () => {
         if (prop === 'WindowGetSize') return () => Promise.resolve({ w: 1280, h: 800 })
         if (prop === 'ClipboardGetText') return () => Promise.resolve('Where is the station?')
         if (prop === 'ClipboardSetText') return () => Promise.resolve()
+        if (prop === 'BrowserOpenURL') {
+          return (url: string) => {
+            ;(window as unknown as { __previewOpened?: string }).__previewOpened = String(url)
+            return Promise.resolve()
+          }
+        }
         if (prop === 'WindowGetPosition') return () => Promise.resolve({ x: 0, y: 0 })
         return () => Promise.resolve()
       },

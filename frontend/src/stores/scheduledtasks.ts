@@ -7,6 +7,7 @@ import { ReadFile, WriteFile, Notify } from '@/bridge'
 import { ScheduledTasksFilePath } from '@/constant/app'
 import { ScheduledTasksType, PluginTriggerEvent } from '@/enums/app'
 import { useSubscribesStore, useRulesetsStore, usePluginsStore, useLogsStore } from '@/stores'
+import { SUBSCRIPTION_UPDATE_TASK_ID, subscriptionUpdateTask } from '@/utils/subscriptionSchedule'
 import { ignoredError, stringifyNoFolding } from '@/utils'
 
 export const useScheduledTasksStore = defineStore('scheduledtasks', () => {
@@ -16,6 +17,11 @@ export const useScheduledTasksStore = defineStore('scheduledtasks', () => {
   const setupScheduledTasks = async () => {
     const data = await ignoredError(ReadFile, ScheduledTasksFilePath)
     data && (scheduledtasks.value = parse(data))
+
+    if (!scheduledtasks.value.some((task) => task.id === SUBSCRIPTION_UPDATE_TASK_ID)) {
+      scheduledtasks.value.push(subscriptionUpdateTask())
+      await saveScheduledTasks().catch(() => undefined)
+    }
 
     scheduledtasks.value.forEach(async ({ disabled, cron, id }) => {
       if (!disabled) {
@@ -175,9 +181,16 @@ export const useScheduledTasksStore = defineStore('scheduledtasks', () => {
 
   const getScheduledTaskById = (id: string) => scheduledtasks.value.find((v) => v.id === id)
 
+  const runBuiltinSubscriptionUpdate = () => {
+    const task = getScheduledTaskById(SUBSCRIPTION_UPDATE_TASK_ID)
+    if (!task || task.disabled) return Promise.resolve()
+    return runScheduledTask(task.id).catch(() => undefined)
+  }
+
   return {
     scheduledtasks,
     setupScheduledTasks,
+    runBuiltinSubscriptionUpdate,
     saveScheduledTasks,
     addScheduledTask,
     editScheduledTask,

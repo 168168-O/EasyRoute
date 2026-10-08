@@ -3,9 +3,9 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { getConnections, getProxies } from '@/api/kernel'
-import { HttpGet, LookupHost } from '@/bridge'
+import { BrowserOpenURL, HttpGet, LookupHost } from '@/bridge'
 import { useAppSettingsStore, useKernelApiStore } from '@/stores'
-import { normalizePinnedRoutes } from '@/utils/appRouting'
+import { explainDomainRoute, normalizePinnedRoutes, type RouteExplanation } from '@/utils/appRouting'
 import { message } from '@/utils'
 import {
   CHECK_TIMEOUT_SEC,
@@ -19,6 +19,15 @@ import {
 
 const report = ref<NetworkCheckReport | null>(null)
 const running = ref(false)
+const domain = ref('')
+const routeRows = ref<RouteExplanation[]>([])
+const routeNote = ref('')
+
+const links = [
+  { label: 'home.networkCheck.openSpeed', url: 'https://speed.cloudflare.com' },
+  { label: 'home.networkCheck.openDns', url: 'https://browserleaks.com/dns' },
+  { label: 'home.networkCheck.openIp', url: 'https://browserleaks.com/ip' },
+]
 
 const { t } = useI18n()
 const kernel = useKernelApiStore()
@@ -128,6 +137,19 @@ const coreDot = computed(() => {
   return report.value.core.tun ? 'green' : 'amber'
 })
 
+const lookupRoute = () => {
+  const rows = explainDomainRoute(domain.value, {
+    pinned: settings.app.pinnedRoutes,
+    domesticDirect: settings.app.domesticDirect !== false,
+  })
+  routeRows.value = rows
+  routeNote.value = rows.length
+    ? ''
+    : domain.value.trim()
+      ? t('home.networkCheck.lookupEmpty')
+      : t('home.networkCheck.domainPh')
+}
+
 const coreText = computed(() => {
   if (!report.value) return ''
   const state = report.value.core.running ? t('home.networkCheck.coreOn') : t('home.networkCheck.coreOff')
@@ -146,6 +168,38 @@ const coreText = computed(() => {
         {{ running ? t('home.networkCheck.running') : t('home.networkCheck.start') }}
       </Button>
     </template>
+    <div class="nc-tools">
+      <button
+        v-for="link in links"
+        :key="link.url"
+        type="button"
+        class="ghost-btn nc-link"
+        @click="BrowserOpenURL(link.url)"
+      >
+        {{ t(link.label) }}
+      </button>
+    </div>
+    <div class="nc-lookup">
+      <input
+        v-model="domain"
+        class="nc-input"
+        :placeholder="t('home.networkCheck.domainPh')"
+        @keydown.enter="lookupRoute"
+      />
+      <button type="button" class="ghost-btn nc-link" @click="lookupRoute">
+        {{ t('home.networkCheck.lookup') }}
+      </button>
+    </div>
+    <div v-if="routeRows.length" class="nc-routes">
+      <div v-for="(row, index) in routeRows" :key="index" class="nc-row">
+        <span class="nc-name">{{ row.scope }}</span>
+        <span class="nc-value">
+          {{ t(row.route === 'proxy' ? 'home.networkCheck.viaProxy' : 'home.networkCheck.viaDirect') }}
+          · {{ row.rule }}
+        </span>
+      </div>
+    </div>
+    <p v-else-if="routeNote" class="nc-idle">{{ routeNote }}</p>
     <p v-if="!report" class="nc-idle">{{ t('home.networkCheck.idle') }}</p>
     <div v-else class="nc-list">
       <div class="nc-row">

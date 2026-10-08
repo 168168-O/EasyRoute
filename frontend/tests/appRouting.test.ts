@@ -571,3 +571,67 @@ test('a saved proxy is not reverted by a second apply or by the program list', (
   assert.equal(matchDnsServer(fromList.dns.rules, { domain: 'qq.com' }), 'Remote-DNS')
   assert.equal(matchDnsServer(fromList.dns.rules, { domain: 'snssdk.com' }), 'Remote-DNS')
 })
+
+test('domestic sites from proxied apps go direct and WeChat stays first', () => {
+  const routed = config()
+  const rules = routed.route.rules as Record<string, unknown>[]
+  const domestic = rules.filter(
+    (rule) => names(rule.process_name).includes('chrome.exe') && rule.rule_set === 'geosite-cn',
+  )
+  assert.equal(domestic.length, 1)
+  assert.equal(domestic[0]?.outbound, 'direct')
+  assert.equal(names(domestic[0]?.process_name).includes('Weixin.exe'), false)
+  assert.equal(names(domestic[0]?.process_name).includes('douyin.exe'), false)
+  assert.equal(rules[0]?.process_name?.includes?.('Weixin.exe') || names(rules[0]?.process_name).includes('Weixin.exe'), true)
+  const wechat = rules.findIndex((rule) => names(rule.process_name).includes('Weixin.exe'))
+  const chromeCn = rules.findIndex(
+    (rule) => names(rule.process_name).includes('chrome.exe') && rule.rule_set === 'geosite-cn',
+  )
+  assert.ok(wechat >= 0 && wechat < chromeCn)
+  assert.equal(
+    matchOutbound(rules, { processName: 'chrome.exe', ruleSet: 'geosite-cn' }),
+    'direct',
+  )
+  assert.equal(matchOutbound(rules, { processName: 'chrome.exe' }), 'proxy')
+  assert.equal(
+    matchOutbound(rules, { processName: 'Weixin.exe', ruleSet: 'geosite-cn', clashMode: 'global' }),
+    'direct',
+  )
+
+  const twice = applyAppRouting(routed, {
+    programs,
+    extraDirectExes: ['douyin_extra.exe'],
+    proxyOutbound: 'proxy',
+    directOutbound: 'direct',
+  })
+  assert.equal(
+    (twice.route.rules as Record<string, unknown>[]).filter(
+      (rule) => names(rule.process_name).includes('chrome.exe') && rule.rule_set === 'geosite-cn',
+    ).length,
+    1,
+  )
+  assert.equal(
+    (twice.route.rules as Record<string, unknown>[]).filter((rule) => names(rule.process_name).includes('Weixin.exe'))
+      .length,
+    1,
+  )
+})
+
+test('turning domestic direct off removes the cn exception and leaves pinned rules', () => {
+  const routed = applyAppRouting(sampleBaseConfig(), {
+    programs,
+    extraDirectExes: ['douyin_extra.exe'],
+    proxyOutbound: 'proxy',
+    directOutbound: 'direct',
+    domesticDirect: false,
+  })
+  const rules = routed.route.rules as Record<string, unknown>[]
+  assert.equal(
+    rules.some((rule) => rule.process_name && rule.rule_set),
+    false,
+  )
+  assert.equal(matchOutbound(rules, { processName: 'chrome.exe', ruleSet: 'geosite-cn' }), 'proxy')
+  assert.equal(matchOutbound(rules, { processName: 'Weixin.exe', clashMode: 'global' }), 'direct')
+  assert.equal(matchOutbound(rules, { processName: 'douyin.exe', clashMode: 'global' }), 'direct')
+  assert.equal(rules[0] && names(rules[0].process_name).includes('Weixin.exe'), true)
+})

@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { parse, stringify } from 'yaml'
 
 import {
+  AutoBackup,
   GetSystemProxyBypass,
   ReadFile,
   WriteFile,
@@ -41,6 +42,7 @@ import {
 import i18n, { loadLocale } from '@/lang'
 import { useAppStore, useEnvStore } from '@/stores'
 import { normalizePinnedRoutes } from '@/utils/appRouting'
+import { migrateAppSettings } from '@/utils/settingsMigration'
 import { debounce, updateTrayAndMenus, ignoredError, deepClone, message } from '@/utils'
 
 export const useAppSettingsStore = defineStore('app-settings', () => {
@@ -59,6 +61,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     backgroundVideo: '',
     appPrograms: [],
     pinnedRoutes: { wechat: 'direct', douyin: 'direct' },
+    domesticDirect: true,
+    simpleMode: true,
     translateHistory: [],
     primaryColor: '#000',
     secondaryColor: '#545454',
@@ -73,7 +77,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     contentProtection: false,
     width: 0,
     height: 0,
-    exitOnClose: true,
+    exitOnClose: false,
+    exitOnCloseMigrated: true,
     closeKernelOnExit: true,
     autoSetSystemProxy: false,
     autoSetSystemDNS: false,
@@ -97,7 +102,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       unAvailable: true,
       cardMode: true,
       cardColumns: DefaultCardColumns,
-      sortByDelay: false,
+      sortByDelay: true,
       testUrl: DefaultTestURL,
       testTimeout: DefaultTestTimeout,
       concurrencyLimit: DefaultConcurrencyLimit,
@@ -115,7 +120,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     githubDownloadMirror: '',
     multipleInstance: false,
     addPluginToMenu: false,
-    addGroupToMenu: false,
+    addGroupToMenu: true,
+    addGroupToMenuDefaulted: true,
+    sortByDelayDefaulted: true,
     rollingRelease: true,
     debugModalSideBySide: false,
     debugOutline: false,
@@ -126,8 +133,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     pages: ['Overview', 'Profiles', 'Subscriptions', 'Plugins'],
   })
 
-  const saveAppSettings = debounce((config: string) => {
-    WriteFile(UserFilePath, config)
+  const saveAppSettings = debounce(async (config: string) => {
+    await AutoBackup().catch(() => undefined)
+    await WriteFile(UserFilePath, config)
   }, 500)
 
   const setupAppSettings = async () => {
@@ -219,6 +227,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     settings.pinnedRoutes = normalizePinnedRoutes(settings.pinnedRoutes)
     if (!Array.isArray(settings.translateHistory)) settings.translateHistory = []
     settings.translateHistory = settings.translateHistory.slice(0, 20)
+    migrateAppSettings(settings, !!data)
 
     app.value = settings
     latestUserSettings = stringify(app.value)

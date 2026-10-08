@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 
-import { ExitApp } from '@/bridge'
+import { ExitApp, ExportBackup, PickFile, RestoreBackup } from '@/bridge'
 import { WebviewGpuPolicyOptions, WindowStateOptions } from '@/constant/app'
 import { OS } from '@/enums/app'
 import { useAppSettingsStore, useEnvStore } from '@/stores'
@@ -78,6 +78,26 @@ if (envStore.env.os === OS.Windows) {
     isAdmin.value = admin
   })
 }
+
+const backupNow = async () => {
+  try {
+    const path = await ExportBackup('')
+    message.success(path)
+  } catch (error: any) {
+    message.error(error)
+  }
+}
+
+const restoreNow = async () => {
+  try {
+    const file = await PickFile('恢复备份', '*.zip')
+    message.success(await RestoreBackup(file))
+  } catch (error: any) {
+    const text = String(error || '')
+    if (!text || text === 'cancelled' || text === 'cancel') return
+    message.error(error)
+  }
+}
 </script>
 
 <template>
@@ -139,6 +159,23 @@ if (envStore.env.os === OS.Windows) {
     <div class="px-8 py-12 flex items-center justify-between">
       <div class="text-16 font-bold">{{ $t('settings.exitOnClose') }}</div>
       <Switch v-model="appSettings.app.exitOnClose" />
+    </div>
+    <div class="px-8 py-12 flex items-center justify-between">
+      <div>
+        <div class="text-16 font-bold">{{ $t('settings.simpleMode') }}</div>
+        <div class="font-normal text-12">{{ $t('settings.simpleModeTips') }}</div>
+      </div>
+      <Switch v-model="appSettings.app.simpleMode" />
+    </div>
+    <div class="px-8 py-12 flex items-center justify-between">
+      <div>
+        <div class="text-16 font-bold">{{ $t('settings.backup.name') }}</div>
+        <div class="font-normal text-12">{{ $t('settings.backup.tips') }}</div>
+      </div>
+      <div class="flex items-center gap-8">
+        <Button size="small" @click="restoreNow">{{ $t('settings.backup.restore') }}</Button>
+        <Button size="small" type="primary" @click="backupNow">{{ $t('settings.backup.export') }}</Button>
+      </div>
     </div>
     <div class="px-8 py-12 flex items-center justify-between">
       <div class="text-16 font-bold">{{ $t('settings.autoStartKernel') }}</div>

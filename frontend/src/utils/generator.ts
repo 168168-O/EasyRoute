@@ -1,6 +1,7 @@
 import { parse } from 'yaml'
 
 import { ListDouyinExes, ReadFile, WriteFile } from '@/bridge'
+import { DefaultTestURL } from '@/constant/app'
 import { CoreConfigFilePath } from '@/constant/kernel'
 import { Branch } from '@/enums/app'
 import {
@@ -20,6 +21,7 @@ import {
   useSubscribesStore,
 } from '@/stores'
 import { applyAppRouting, type RoutedProgram } from '@/utils/appRouting'
+import { attachCountryGroups } from '@/utils/countryGroups'
 import { deepAssign, deepClone, APP_TITLE, createTextMatcher } from '@/utils'
 
 const _generateRule = (
@@ -199,7 +201,7 @@ const generateOutbounds = async (outbounds: App.Outbound[]) => {
   result.push(...proxiesSet)
   result.push(...Array.from(builtInProxiesSet).map((v) => ({ type: v, tag: v })))
 
-  return result
+  return attachCountryGroups(result, DefaultTestURL)
 }
 
 const generateRoute = (
@@ -530,6 +532,7 @@ export const applyRoutingToConfig = async (config: Recordable) => {
     // Re-read the saved choice on every rebuild so a subscription, profile
     // script, or clash mode change cannot put WeChat or Douyin back.
     pinnedRoutes: appSettings.app.pinnedRoutes,
+    domesticDirect: appSettings.app.domesticDirect !== false,
     appPath: envStore.env.appPath,
   })
 }

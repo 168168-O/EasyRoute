@@ -236,6 +236,18 @@ onMounted(() => {
     </div>
 
     <div class="group">
+      <b>{{ t('routing.domesticTitle') }}</b>
+      <span>{{ t('routing.domesticHint') }}</span>
+    </div>
+    <div class="app-row">
+      <div class="app-meta">
+        <div class="app-name">{{ t('routing.domesticDirect') }}</div>
+        <div class="app-exe">{{ t('routing.domesticDirectHint') }}</div>
+      </div>
+      <Switch v-model="appSettings.app.domesticDirect" />
+    </div>
+
+    <div class="group">
       <b>{{ t('routing.mine') }}</b>
       <span>{{ programs.length }} · {{ t('routing.mineHint') }}</span>
     </div>

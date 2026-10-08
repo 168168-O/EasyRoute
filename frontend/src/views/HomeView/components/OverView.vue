@@ -11,6 +11,7 @@ import CommonController from './CommonController.vue'
 import ConnectionsController from './ConnectionsController.vue'
 import LogsController from './LogsController.vue'
 import NetworkCheck from './NetworkCheck.vue'
+import SubscriptionStatus from './SubscriptionStatus.vue'
 
 const trafficHistory = ref<[number[], number[]]>([[], []])
 const statistics = ref({
@@ -248,6 +249,7 @@ onUnmounted(() => {
         </div>
       </Card>
     </div>
+    <SubscriptionStatus />
     <NetworkCheck class="mt-12" />
     <div class="home-dashboard flex">
       <div class="traffic-panel w-[60%]">

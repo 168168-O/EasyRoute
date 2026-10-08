@@ -21,6 +21,24 @@ export const UpdateTrayAndMenus = Bridge.UpdateTrayAndMenus
 
 export const LookupHost = (host: string) => Bridge.LookupHost(host)
 
+export const ExportBackup = async (dest = '') => {
+  const { flag, data } = await Bridge.ExportBackup(dest)
+  if (!flag) throw data
+  return data
+}
+
+export const RestoreBackup = async (src: string) => {
+  const { flag, data } = await Bridge.RestoreBackup(src)
+  if (!flag) throw data
+  return data
+}
+
+export const AutoBackup = async () => {
+  const { flag, data } = await Bridge.AutoBackup()
+  if (!flag) throw data
+  return data
+}
+
 export const GetEnv = <T extends string | undefined = undefined>(
   key?: T,
 ): Promise<T extends string ? string : App.AppEnv> => {
