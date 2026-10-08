@@ -818,8 +818,6 @@ body[theme-mode='light'] .theme-card .theme-copy span {
 .app-name { font-size: 16px; font-weight: 600; }
 .app-exe { font-size: 12px; color: var(--text-2); }
 .lock-note { color: #bfe3ff; font-size: 13px; }
-.mode-locked { opacity: 1; }
-.mode-locked .gui-radio-button:not(.active) { color: #8fa0b3 !important; text-decoration: line-through; pointer-events: none; }
 .del {
   cursor: pointer;
   width: 30px;

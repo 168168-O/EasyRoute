@@ -4,11 +4,13 @@ import { useI18n } from 'vue-i18n'
 
 import { ListProcesses, PickFile } from '@/bridge'
 import { useAppSettingsStore, useKernelApiStore } from '@/stores'
-import { message, sampleID } from '@/utils'
+import { confirm, message, sampleID } from '@/utils'
 import {
   DOUYIN_PROCESSES,
   WECHAT_PROCESSES,
   isPinnedExe,
+  normalizePinnedRoutes,
+  type AppRouteMode,
   type RoutedProgram,
 } from '@/utils/appRouting'
 
@@ -26,7 +28,7 @@ const modeOptions = [
   { label: 'routing.direct', value: 'direct' },
 ]
 
-const pinned = [
+const pinned: { id: 'wechat' | 'douyin'; name: string; color: string; exes: string[] }[] = [
   {
     id: 'wechat',
     name: '微信',
@@ -100,6 +102,23 @@ const addProgram = (name: string, exe: string) => {
   }
   appSettings.app.appPrograms = [...programs.value, next]
   pickerOpen.value = false
+}
+
+const pinnedMode = (id: 'wechat' | 'douyin'): AppRouteMode =>
+  normalizePinnedRoutes(appSettings.app.pinnedRoutes)[id]
+
+const setPinnedMode = async (id: 'wechat' | 'douyin', mode: string | number | boolean | undefined) => {
+  const next: AppRouteMode = mode === 'proxy' ? 'proxy' : 'direct'
+  const current = normalizePinnedRoutes(appSettings.app.pinnedRoutes)
+  if (current[id] === next) return
+  if (next === 'proxy') {
+    try {
+      await confirm('routing.proxyConfirmTitle', 'routing.proxyConfirmBody')
+    } catch {
+      return
+    }
+  }
+  appSettings.app.pinnedRoutes = { ...current, [id]: next }
 }
 
 const setMode = (id: string, mode: string | number | boolean | undefined) => {
@@ -207,9 +226,12 @@ onMounted(() => {
           <div class="app-exe">{{ summary(item.exes) }}</div>
         </div>
         <span class="lock-note">{{ t('routing.locked') }}</span>
-        <div class="mode-locked">
-          <Radio model-value="direct" tone="blue" :options="modeOptions" />
-        </div>
+        <Radio
+          :model-value="pinnedMode(item.id)"
+          tone="blue"
+          :options="modeOptions"
+          @update:model-value="setPinnedMode(item.id, $event)"
+        />
       </div>
     </div>
 

@@ -63,6 +63,11 @@ declare namespace App {
       exe: string
       mode: AppRouteMode
     }[]
+    /** Saved WeChat / Douyin choice. Only an explicit proxy value leaves 走本地. */
+    pinnedRoutes: {
+      wechat: AppRouteMode
+      douyin: AppRouteMode
+    }
     translateHistory: {
       id: string
       input: string

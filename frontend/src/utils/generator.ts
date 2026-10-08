@@ -527,6 +527,9 @@ export const applyRoutingToConfig = async (config: Recordable) => {
   return applyAppRouting(config, {
     programs,
     extraDirectExes: await readDouyinExes(),
+    // Re-read the saved choice on every rebuild so a subscription, profile
+    // script, or clash mode change cannot put WeChat or Douyin back.
+    pinnedRoutes: appSettings.app.pinnedRoutes,
     appPath: envStore.env.appPath,
   })
 }

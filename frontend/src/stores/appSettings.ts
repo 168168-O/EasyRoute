@@ -40,6 +40,7 @@ import {
 } from '@/enums/app'
 import i18n, { loadLocale } from '@/lang'
 import { useAppStore, useEnvStore } from '@/stores'
+import { normalizePinnedRoutes } from '@/utils/appRouting'
 import { debounce, updateTrayAndMenus, ignoredError, deepClone, message } from '@/utils'
 
 export const useAppSettingsStore = defineStore('app-settings', () => {
@@ -57,6 +58,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     dynamicBackground: true,
     backgroundVideo: '',
     appPrograms: [],
+    pinnedRoutes: { wechat: 'direct', douyin: 'direct' },
     translateHistory: [],
     primaryColor: '#000',
     secondaryColor: '#545454',
@@ -213,6 +215,8 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     if (settings.dynamicBackground === undefined) settings.dynamicBackground = true
     if (settings.backgroundVideo === undefined) settings.backgroundVideo = ''
     if (!Array.isArray(settings.appPrograms)) settings.appPrograms = []
+    // A saved 走代理 stays 走代理. Missing or invalid values stay 走本地.
+    settings.pinnedRoutes = normalizePinnedRoutes(settings.pinnedRoutes)
     if (!Array.isArray(settings.translateHistory)) settings.translateHistory = []
     settings.translateHistory = settings.translateHistory.slice(0, 20)
 

@@ -2,13 +2,16 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import {
+  DOUYIN_DOMAIN_SUFFIXES,
   DOUYIN_PROCESSES,
   FAKEIP_EXCLUDED_SUFFIXES,
   SAFETY_DOMAIN_SUFFIXES,
+  WECHAT_DOMAIN_SUFFIXES,
   WECHAT_PROCESSES,
   applyAppRouting,
   matchDnsServer,
   matchOutbound,
+  normalizePinnedRoutes,
   sampleBaseConfig,
 } from '../src/utils/appRouting.ts'
 
@@ -361,4 +364,210 @@ test('GeoSite-CN is kept on local dns and geolocation-!cn is not rewritten', () 
   const cnIndex = dnsRules.indexOf(cn[0]!)
   const globalIndex = dnsRules.findIndex((rule) => rule.clash_mode === 'global')
   assert.ok(cnIndex >= 0 && cnIndex < globalIndex)
+})
+
+test('normalizePinnedRoutes keeps a saved proxy and defaults everything else to direct', () => {
+  assert.deepEqual(normalizePinnedRoutes(undefined), { wechat: 'direct', douyin: 'direct' })
+  assert.deepEqual(normalizePinnedRoutes(null), { wechat: 'direct', douyin: 'direct' })
+  assert.deepEqual(normalizePinnedRoutes({}), { wechat: 'direct', douyin: 'direct' })
+  assert.deepEqual(normalizePinnedRoutes({ wechat: 'local', douyin: 'PROXY' }), {
+    wechat: 'direct',
+    douyin: 'direct',
+  })
+  assert.deepEqual(normalizePinnedRoutes({ wechat: 'proxy', douyin: 'nope' }), {
+    wechat: 'proxy',
+    douyin: 'direct',
+  })
+  assert.deepEqual(normalizePinnedRoutes({ wechat: 'proxy', douyin: 'proxy' }), {
+    wechat: 'proxy',
+    douyin: 'proxy',
+  })
+})
+
+const withFakeIp = () => {
+  const base = sampleBaseConfig()
+  base.dns.servers.push({ type: 'fakeip', tag: 'fakeip-dns', inet4_range: '198.18.0.0/15' })
+  return base
+}
+
+const routeOpts = (pinnedRoutes: { wechat: 'proxy' | 'direct'; douyin: 'proxy' | 'direct' }) => ({
+  programs,
+  extraDirectExes: ['douyin_extra.exe'],
+  pinnedRoutes,
+  proxyOutbound: 'proxy',
+  directOutbound: 'direct',
+})
+
+test('WeChat and Douyin go to the proxy at top priority when that choice is saved', () => {
+  const pinnedRoutes = { wechat: 'proxy' as const, douyin: 'proxy' as const }
+  const routed = applyAppRouting(withFakeIp(), routeOpts(pinnedRoutes))
+  const rules = routed.route.rules as Record<string, unknown>[]
+  const dnsRules = routed.dns.rules as Record<string, any>[]
+
+  for (const exe of ['Weixin.exe', 'WeChat.exe', 'douyin.exe', 'douyin_tray.exe', 'douyin_extra.exe']) {
+    assert.equal(matchOutbound(rules, { processName: exe, clashMode: 'global' }), 'proxy', exe)
+  }
+  assert.equal(
+    matchOutbound(rules, {
+      processPath: String.raw`C:\Program Files (x86)\ByteDance\douyin\douyin_unknown.exe`,
+      clashMode: 'global',
+    }),
+    'proxy',
+  )
+  for (const domain of ['weixin.qq.com', 'qq.com', 'douyin.com', 'byteimg.com']) {
+    assert.equal(matchOutbound(rules, { domain, clashMode: 'global' }), 'proxy', domain)
+    assert.equal(matchDnsServer(dnsRules, { domain }), 'Remote-DNS', domain)
+  }
+  assert.equal(matchOutbound(rules, { processName: 'chrome.exe', clashMode: 'global' }), 'proxy')
+  assert.equal(matchOutbound(rules, { processName: 'notepad.exe', clashMode: 'global' }), 'direct')
+  assert.equal(
+    matchDnsServer(dnsRules, { processName: 'Weixin.exe', domain: 'www.google.com', queryType: 'A' }),
+    'fakeip-dns',
+  )
+  assert.equal(
+    matchDnsServer(dnsRules, { processName: 'douyin.exe', domain: 'www.google.com', queryType: 'AAAA' }),
+    'fakeip-dns',
+  )
+
+  const domainRule = rules.find((rule) => names(rule.domain_suffix).includes('douyin.com'))
+  assert.equal(domainRule?.outbound, 'proxy')
+  for (const suffix of SAFETY_DOMAIN_SUFFIXES) {
+    assert.ok(names(domainRule?.domain_suffix).includes(suffix), suffix)
+  }
+  assert.equal(
+    rules.some((rule) => rule.outbound === 'direct' && names(rule.domain_suffix).includes('weixin.qq.com')),
+    false,
+  )
+  assert.equal(
+    dnsRules.some((rule) => rule.server === 'dhagn-local-dns' && names(rule.domain_suffix).includes('douyin.com')),
+    false,
+  )
+  assert.equal(
+    dnsRules.some((rule) => rule.server === 'dhagn-local-dns' && names(rule.process_name).includes('Weixin.exe')),
+    false,
+  )
+
+  const logical = dnsRules.find((rule) => rule.type === 'logical' && rule.server === 'fakeip-dns')
+  assert.ok(names(logical.rules[0].process_name).includes('Weixin.exe'))
+  assert.ok(names(logical.rules[0].process_name).includes('douyin_extra.exe'))
+  const chromeRule = rules.find(
+    (rule) => names(rule.process_name).includes('chrome.exe') && rule.outbound === 'proxy' && !rule.inbound,
+  )
+  assert.equal(names(chromeRule?.process_name).includes('Weixin.exe'), false)
+
+  const globalIndex = rules.findIndex((rule) => rule.clash_mode === 'global')
+  const domainIndex = rules.findIndex((rule) => names(rule.domain_suffix).includes('weixin.qq.com'))
+  assert.equal(rules.findIndex((rule) => names(rule.process_name).includes('Weixin.exe')), 0)
+  assert.ok(domainIndex >= 0 && domainIndex < globalIndex)
+  const cn = dnsRules.findIndex((rule) => ruleSets(rule).includes('geosite-cn'))
+  const proxyDns = dnsRules.findIndex((rule) => names(rule.domain_suffix).includes('weixin.qq.com'))
+  assert.ok(proxyDns >= 0 && proxyDns < cn)
+  assert.equal(dnsRules[proxyDns]?.server, 'Remote-DNS')
+})
+
+test('a split choice sends only the proxy app and its domains through the proxy', () => {
+  const pinnedRoutes = { wechat: 'proxy' as const, douyin: 'direct' as const }
+  const routed = applyAppRouting(withFakeIp(), routeOpts(pinnedRoutes))
+  const rules = routed.route.rules as Record<string, unknown>[]
+  const dnsRules = routed.dns.rules as Record<string, any>[]
+
+  assert.equal(matchOutbound(rules, { processName: 'Weixin.exe', clashMode: 'global' }), 'proxy')
+  assert.equal(matchOutbound(rules, { processName: 'douyin.exe', clashMode: 'global' }), 'direct')
+  assert.equal(matchOutbound(rules, { processName: 'douyin_extra.exe', clashMode: 'rule' }), 'direct')
+  assert.equal(
+    matchOutbound(rules, {
+      processPath: String.raw`D:\ByteDance\douyin\widget.exe`,
+      clashMode: 'global',
+    }),
+    'direct',
+  )
+  for (const domain of WECHAT_DOMAIN_SUFFIXES) {
+    assert.equal(matchOutbound(rules, { domain, clashMode: 'global' }), 'proxy', domain)
+    assert.equal(matchDnsServer(dnsRules, { domain }), 'Remote-DNS', domain)
+  }
+  for (const domain of DOUYIN_DOMAIN_SUFFIXES) {
+    assert.equal(matchOutbound(rules, { domain, clashMode: 'global' }), 'direct', domain)
+    assert.equal(matchDnsServer(dnsRules, { domain }), 'dhagn-local-dns', domain)
+  }
+  assert.equal(
+    matchDnsServer(dnsRules, { processName: 'Weixin.exe', domain: 'www.google.com', queryType: 'A' }),
+    'fakeip-dns',
+  )
+  assert.equal(
+    matchDnsServer(dnsRules, { processName: 'douyin.exe', domain: 'www.google.com', queryType: 'A' }),
+    'dhagn-local-dns',
+  )
+  assert.equal(
+    dnsRules.some((rule) => rule.server === 'dhagn-local-dns' && names(rule.process_name).includes('Weixin.exe')),
+    false,
+  )
+
+  const proxyDomain = rules.findIndex((rule) => names(rule.domain_suffix).includes('qq.com'))
+  const directDomain = rules.findIndex((rule) => names(rule.domain_suffix).includes('douyin.com'))
+  const globalIndex = rules.findIndex((rule) => rule.clash_mode === 'global')
+  assert.ok(proxyDomain >= 0 && proxyDomain < directDomain && directDomain < globalIndex)
+  const proxyDns = dnsRules.findIndex((rule) => names(rule.domain_suffix).includes('weixin.qq.com'))
+  const directDns = dnsRules.findIndex((rule) => names(rule.domain_suffix).includes('douyin.com'))
+  const cn = dnsRules.findIndex((rule) => ruleSets(rule).includes('geosite-cn'))
+  assert.ok(proxyDns >= 0 && proxyDns < cn)
+  assert.ok(directDns >= 0 && directDns < cn)
+  assert.equal(dnsRules[proxyDns]?.server, 'Remote-DNS')
+  assert.equal(dnsRules[directDns]?.server, 'dhagn-local-dns')
+
+  const hijack = rules.find((rule) => rule.action === 'hijack-dns' && rule.process_name)
+  assert.ok(names(hijack?.process_name).includes('Weixin.exe'))
+  assert.ok(names(hijack?.process_name).includes('chrome.exe'))
+  assert.equal(names(hijack?.process_name).includes('douyin.exe'), false)
+})
+
+test('a saved proxy is not reverted by a second apply or by the program list', () => {
+  const proxyRoutes = { wechat: 'proxy' as const, douyin: 'direct' as const }
+  const flipped = applyAppRouting(config(), routeOpts(proxyRoutes))
+  const again = applyAppRouting(flipped, routeOpts(proxyRoutes))
+  const rules = again.route.rules as Record<string, unknown>[]
+  const dnsRules = again.dns.rules as Record<string, unknown>[]
+
+  assert.equal(matchOutbound(rules, { processName: 'Weixin.exe', clashMode: 'global' }), 'proxy')
+  assert.equal(matchOutbound(rules, { processName: 'douyin.exe', clashMode: 'global' }), 'direct')
+  assert.equal(
+    rules.filter(
+      (rule) =>
+        rule.action === 'route' && names(rule.process_name).includes('Weixin.exe') && !rule.inbound,
+    ).length,
+    1,
+  )
+  assert.equal(
+    rules.some((rule) => names(rule.process_name).includes('Weixin.exe') && rule.outbound === 'direct'),
+    false,
+  )
+  assert.equal(
+    rules.some((rule) => names(rule.domain_suffix).includes('weixin.qq.com') && rule.outbound === 'direct'),
+    false,
+  )
+  assert.equal(matchDnsServer(dnsRules, { domain: 'weixin.qq.com' }), 'Remote-DNS')
+  assert.equal(matchDnsServer(dnsRules, { domain: 'douyin.com' }), 'dhagn-local-dns')
+  assert.equal(
+    dnsRules.filter((rule) => names(rule.domain_suffix).includes('weixin.qq.com')).length,
+    1,
+  )
+
+  const listedDirect = programs.map((program) =>
+    program.exe === 'Weixin.exe' || program.exe === 'douyin.exe'
+      ? { ...program, mode: 'direct' as const }
+      : program,
+  )
+  const fromList = applyAppRouting(sampleBaseConfig(), {
+    ...routeOpts({ wechat: 'proxy', douyin: 'proxy' }),
+    programs: listedDirect,
+  })
+  assert.equal(
+    matchOutbound(fromList.route.rules, { processName: 'Weixin.exe', clashMode: 'rule' }),
+    'proxy',
+  )
+  assert.equal(
+    matchOutbound(fromList.route.rules, { processName: 'douyin.exe', clashMode: 'global' }),
+    'proxy',
+  )
+  assert.equal(matchDnsServer(fromList.dns.rules, { domain: 'qq.com' }), 'Remote-DNS')
+  assert.equal(matchDnsServer(fromList.dns.rules, { domain: 'snssdk.com' }), 'Remote-DNS')
 })
