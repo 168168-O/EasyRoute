@@ -117,16 +117,45 @@ body {
   pointer-events: auto;
 }
 
-/* Outer glass window */
+/* Outer glass window: 1px gold-to-ice hairline, long shadow, one grain veil. */
 #app .app-main {
   margin: 0 14px 14px;
   border-radius: 28px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)) padding-box,
+    linear-gradient(115deg, rgba(var(--accent-rgb), 0.9), rgba(255, 255, 255, 0.55) 42%, rgba(var(--accent-2-rgb), 0.85)) border-box;
   box-shadow:
+    0 28px 56px -30px rgba(0, 6, 18, 0.72),
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+    inset 0 0 48px rgba(var(--accent-2-rgb), 0.05);
   overflow: hidden;
   position: relative;
+}
+
+#app .app-main::before {
+  content: '';
+  position: absolute;
+  z-index: 3;
+  left: 36px;
+  right: 36px;
+  top: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.92) 35%, rgba(var(--accent-2-rgb), 0.8) 62%, transparent);
+}
+
+#app .app-main::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: url('../grain.png');
+  background-size: 64px 64px;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
 }
 
 #app .app-titlebar {
@@ -135,9 +164,9 @@ body {
 }
 
 #app .app-titlebar__name {
-  letter-spacing: 1px;
+  letter-spacing: 0.04em;
   color: #fff;
-  font-weight: 600;
+  font-weight: 500;
   text-shadow: none;
 }
 
@@ -168,8 +197,8 @@ body {
 }
 
 #app .main-nav {
-  gap: 6px;
-  padding: 4px 8px 0;
+  gap: 8px;
+  padding: 8px 8px 0;
 }
 
 #app .main-nav__button {
@@ -204,6 +233,7 @@ body {
   height: 18px;
   fill: none;
   stroke: currentColor;
+  stroke-width: 1.35;
 }
 
 /* Inner glass content */
@@ -213,19 +243,36 @@ body {
 }
 
 #app .app-page {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
-  padding-bottom: 28px;
-  scroll-padding-bottom: 28px;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: 32px;
+  scroll-padding-bottom: 32px;
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(8, 20, 48, 0.16));
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(8, 20, 48, 0.14)) padding-box,
+    linear-gradient(120deg, rgba(var(--accent-rgb), 0.72), rgba(255, 255, 255, 0.38) 46%, rgba(var(--accent-2-rgb), 0.7)) border-box;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.78),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.32),
-    inset 0 -10px 18px rgba(0, 8, 24, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    inset 0 0 36px rgba(var(--accent-2-rgb), 0.05);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+}
+
+#app .app-page::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  left: 28px;
+  right: 28px;
+  top: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), rgba(var(--accent-2-rgb), 0.55), transparent);
 }
 
 #app .gui-card {
@@ -257,13 +304,13 @@ body {
 }
 
 #app .gui-radio {
-  border: 0 !important;
+  border: 1px solid transparent !important;
   border-radius: 999px;
   padding: 3px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.62),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)) padding-box,
+    linear-gradient(110deg, rgba(var(--accent-rgb), 0.72), rgba(var(--accent-2-rgb), 0.55)) border-box !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
 }
 
 #app .gui-radio-button {
@@ -367,8 +414,14 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #app .gui-switch {
+  #app .gui-switch,
+  #app .gui-button,
+  #app .main-nav__button,
+  .glass-chip,
+  .themes .t,
+  .ghost-btn {
     animation: none;
+    transition: none;
   }
 }
 
@@ -388,15 +441,17 @@ body[feature-no-animation='true'] .glass-chip {
   height: 28px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  color: rgba(255, 255, 255, 0.82);
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.92);
   font: inherit;
   font-size: 12px;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(6, 16, 42, 0.42));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(6, 16, 42, 0.28)) padding-box,
+    linear-gradient(110deg, rgba(var(--accent-rgb), 0.65), rgba(var(--accent-2-rgb), 0.5)) border-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
   text-shadow: none;
 }
 
@@ -414,7 +469,9 @@ body[feature-no-animation='true'] .glass-chip {
 }
 
 .glass-chip:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(8, 18, 42, 0.36));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(8, 18, 42, 0.24)) padding-box,
+    linear-gradient(110deg, rgba(var(--accent-rgb), 0.85), rgba(var(--accent-2-rgb), 0.7)) border-box;
 }
 
 .glass-chip.on:hover {
@@ -462,10 +519,47 @@ body:not([theme-mode='light']) #app .font-bold {
 
 #app .text-16.font-bold {
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-#app .text-18.font-bold {
-  font-weight: 700;
+#app .text-18,
+#app .rt-title {
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+.home-stat-card__value,
+.home-stat-card__value span,
+.metric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: 0;
+}
+
+#app .gui-button,
+#app .main-nav__button,
+.glass-chip,
+.themes .t,
+.ghost-btn {
+  transition: transform 180ms ease-out, box-shadow 180ms ease-out, background 180ms ease-out;
+}
+
+#app .gui-button:hover,
+#app .main-nav__button:hover,
+.glass-chip:hover,
+.themes .t:hover,
+.ghost-btn:hover {
+  transform: translateY(-1px);
+}
+
+#app .gui-button:active,
+#app .main-nav__button:active,
+.glass-chip:active,
+.themes .t:active,
+.ghost-btn:active,
+#app .gui-radio-button:active {
+  transform: translateY(0) scale(0.985);
+  transition-duration: 90ms;
 }
 
 body[theme-mode='light'] {
@@ -515,15 +609,17 @@ body[theme-mode='light'] #app .main-nav__button.is-active {
   font-weight: 600;
   line-height: 1.2;
   color: #fff;
-  padding: 6px 10px;
+  padding: 8px 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(8, 18, 42, 0.22));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(8, 18, 42, 0.2)) padding-box,
+    linear-gradient(110deg, rgba(var(--accent-rgb), 0.65), rgba(var(--accent-2-rgb), 0.5)) border-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
   text-shadow: none;
   white-space: nowrap;
 }
@@ -612,11 +708,13 @@ body[theme-mode='light'] #app .main-nav__button.is-active {
 .ghost-btn {
   cursor: pointer;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  border: 1px solid transparent;
   border-radius: 999px;
-  padding: 7px 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  padding: 8px 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)) padding-box,
+    linear-gradient(110deg, rgba(var(--accent-rgb), 0.7), rgba(var(--accent-2-rgb), 0.55)) border-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
   text-shadow: none;
   font-weight: 600;
 }
