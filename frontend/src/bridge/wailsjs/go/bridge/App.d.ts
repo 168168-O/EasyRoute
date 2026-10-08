@@ -78,6 +78,8 @@ export function RestoreBackup(arg1:string):Promise<bridge.FlagResult>;
 
 export function SetSystemDNS(arg1:string,arg2:Array<string>):Promise<bridge.FlagResult>;
 
+export function SecurityCheck(arg1:number,arg2:string):Promise<bridge.FlagResult>;
+
 export function SetSystemProxy(arg1:boolean,arg2:string,arg3:string,arg4:string,arg5:Array<string>):Promise<bridge.FlagResult>;
 
 export function ShowMainWindow():Promise<void>;

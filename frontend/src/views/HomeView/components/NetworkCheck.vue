@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { getConnections, getProxies } from '@/api/kernel'
-import { BrowserOpenURL, HttpGet, LookupHost } from '@/bridge'
+import { BrowserOpenURL, HttpGet, LookupHost, SecurityCheck, type SecurityReport } from '@/bridge'
 import { useAppSettingsStore, useKernelApiStore } from '@/stores'
 import { explainDomainRoute, normalizePinnedRoutes, type RouteExplanation } from '@/utils/appRouting'
 import { message } from '@/utils'
@@ -19,6 +19,8 @@ import {
 
 const report = ref<NetworkCheckReport | null>(null)
 const running = ref(false)
+const security = ref<SecurityReport | null>(null)
+const securityRunning = ref(false)
 const domain = ref('')
 const routeRows = ref<RouteExplanation[]>([])
 const routeNote = ref('')
@@ -137,6 +139,20 @@ const coreDot = computed(() => {
   return report.value.core.tun ? 'green' : 'amber'
 })
 
+const runSecurity = async () => {
+  if (securityRunning.value) return
+  securityRunning.value = true
+  try {
+    const port = Number(kernel.config['mixed-port'] || 0)
+    const tun = kernel.config.tun?.device || 'tun0'
+    security.value = await SecurityCheck(port, tun)
+  } catch (error) {
+    message.error(error)
+  } finally {
+    securityRunning.value = false
+  }
+}
+
 const lookupRoute = () => {
   const rows = explainDomainRoute(domain.value, {
     pinned: settings.app.pinnedRoutes,
@@ -169,6 +185,9 @@ const coreText = computed(() => {
       </Button>
     </template>
     <div class="nc-tools">
+      <button type="button" class="ghost-btn nc-link" :disabled="securityRunning" @click="runSecurity">
+        {{ securityRunning ? t('home.networkCheck.securityRunning') : t('home.networkCheck.securityStart') }}
+      </button>
       <button
         v-for="link in links"
         :key="link.url"
@@ -178,6 +197,14 @@ const coreText = computed(() => {
       >
         {{ t(link.label) }}
       </button>
+    </div>
+    <p v-if="!security" class="nc-idle">{{ t('home.networkCheck.securityIdle') }}</p>
+    <div v-else class="nc-list nc-security">
+      <div v-for="item in security.items" :key="item.id" class="nc-row">
+        <i class="nc-dot" :class="item.level" />
+        <span class="nc-name">{{ item.name }}</span>
+        <span class="nc-value">{{ item.text }}</span>
+      </div>
     </div>
     <div class="nc-lookup">
       <input

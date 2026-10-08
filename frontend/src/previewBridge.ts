@@ -147,6 +147,20 @@ export const installPreviewBridge = () => {
     RestoreBackup: () => ok('已恢复，请重启软件'),
     AutoBackup: () => ok('preview'),
     GetInterfaces: () => ok(''),
+    SecurityCheck: () =>
+      ok(
+        JSON.stringify({
+          supported: false,
+          items: [
+            {
+              id: 'platform',
+              name: '安全检查',
+              level: 'yellow',
+              text: '安全检查只在 Windows 上读取本机设置。',
+            },
+          ],
+        }),
+      ),
     GetSystemProxy: () => Promise.resolve({ flag: false, data: '' }),
     GetSystemProxyBypass: () => ok(''),
   }

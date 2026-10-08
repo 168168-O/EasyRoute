@@ -695,8 +695,16 @@ body:not([theme-mode='light']) #app .font-bold {
 }
 
 .nc-dot.green { background: #34c778; }
-.nc-dot.amber { background: #e2b340; }
+.nc-dot.amber, .nc-dot.yellow { background: #e2b340; }
 .nc-dot.red { background: #e25b5b; }
+.network-check .nc-security { margin-top: 8px; }
+.network-check .nc-security .nc-name { min-width: 64px; }
+.network-check .nc-security .nc-value {
+  margin-left: 0;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
 
 body[theme-mode='light'] .network-check .nc-name,
 body[theme-mode='light'] .sub-name { color: #142033; }

@@ -408,6 +408,9 @@ export default {
       domainPh: '输入域名或网址，查看走哪条路线',
       lookup: '查看路线',
       lookupEmpty: '无法按域名判断这条地址',
+      securityStart: '安全检查',
+      securityRunning: '检查中',
+      securityIdle: '安全检查只读，不会修改系统设置。',
       sites: {
         baidu: '百度',
         wechat: '微信',
