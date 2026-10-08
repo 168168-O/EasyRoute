@@ -29,6 +29,12 @@ func resolvePath(path string) string {
 }
 
 func requestProxy(proxyAddr string) func(*http.Request) (*url.URL, error) {
+	// "direct" is an explicit no-proxy dial. An empty value still follows the
+	// environment, which may be the system proxy.
+	if proxyAddr == "direct" {
+		return func(*http.Request) (*url.URL, error) { return nil, nil }
+	}
+
 	proxy := http.ProxyFromEnvironment
 
 	if proxyAddr != "" {

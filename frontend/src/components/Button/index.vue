@@ -28,7 +28,7 @@ withDefaults(defineProps<Props>(), {
   <div
     :role="role"
     :aria-disabled="disabled || loading ? true : undefined"
-    :class="[type, size, { 'pointer-events-none': disabled || loading }]"
+    :class="[type, size, { 'pointer-events-none': disabled || loading, 'glass-ring': type === 'primary' }]"
     class="gui-button inline-flex items-center justify-center text-center align-middle rounded-6 text-14 text-nowrap cursor-pointer px-12 py-6 duration-200"
   >
     <Icon
@@ -72,15 +72,9 @@ withDefaults(defineProps<Props>(), {
 }
 
 .primary {
-  color: var(--btn-primary-color);
-  background-color: var(--btn-primary-bg);
-  border: none;
-  &:hover {
-    background-color: var(--btn-primary-hover-bg);
-  }
-  &:active {
-    background-color: var(--btn-primary-active-bg);
-  }
+  color: #fff;
+  background: transparent;
+  border: 2px solid transparent;
 }
 
 .link {

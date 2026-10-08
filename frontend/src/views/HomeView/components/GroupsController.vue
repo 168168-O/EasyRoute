@@ -195,6 +195,31 @@ const locateGroup = (group: any, chain: string) => {
   }
 }
 
+const groupTypeKey: Record<string, string> = {
+  selector: 'home.groups.selector',
+  urltest: 'home.groups.urltest',
+  fallback: 'home.groups.fallback',
+  loadbalance: 'home.groups.loadbalance',
+}
+
+const outboundNameKey: Record<string, string> = {
+  direct: 'home.groups.direct',
+  block: 'home.groups.block',
+  global: 'home.groups.global',
+}
+
+const displayType = (type: string) => {
+  const key = groupTypeKey[type.toLowerCase()]
+  return key ? t(key) : type
+}
+
+const nameKey = (name: string) => outboundNameKey[name.toLowerCase()] || name
+
+const displayName = (name: string) => {
+  const key = outboundNameKey[name.toLowerCase()]
+  return key ? t(key) : name
+}
+
 const delayColor = (delay = 0) => {
   if (delay === 0) return 'var(--level-0-color)'
   if (delay < 500) return 'var(--level-1-color)'
@@ -221,14 +246,52 @@ onActivated(() => {
 <template>
   <div class="m-8 mt-0 sticky top-0 z-3">
     <div
-      class="sticky flex gap-8 items-center p-8 rounded-8 backdrop-blur-sm"
+      class="proxy-toolbar sticky flex flex-wrap gap-8 items-center p-8 rounded-8"
       style="background-color: var(--card-bg)"
     >
-      <Switch v-model="appSettings.app.kernel.autoClose" label="home.controller.autoClose" />
-      <Switch v-model="appSettings.app.kernel.unAvailable" label="home.controller.unAvailable" />
-      <Switch v-model="appSettings.app.kernel.cardMode" label="home.controller.cardMode" />
-      <Switch v-model="appSettings.app.kernel.sortByDelay" label="home.controller.sortBy" />
-      <Button type="primary" size="small" @click="toggleMoreSettings"> ... </Button>
+      <button
+        type="button"
+        class="glass-chip"
+        :class="{ on: appSettings.app.kernel.autoClose }"
+        :aria-pressed="appSettings.app.kernel.autoClose"
+        @click="appSettings.app.kernel.autoClose = !appSettings.app.kernel.autoClose"
+      >
+        {{ t('home.controller.autoClose') }}
+      </button>
+      <button
+        type="button"
+        class="glass-chip"
+        :class="{ on: appSettings.app.kernel.unAvailable }"
+        :aria-pressed="appSettings.app.kernel.unAvailable"
+        @click="appSettings.app.kernel.unAvailable = !appSettings.app.kernel.unAvailable"
+      >
+        {{ t('home.controller.unAvailable') }}
+      </button>
+      <button
+        type="button"
+        class="glass-chip"
+        :class="{ on: appSettings.app.kernel.cardMode }"
+        :aria-pressed="appSettings.app.kernel.cardMode"
+        @click="appSettings.app.kernel.cardMode = !appSettings.app.kernel.cardMode"
+      >
+        {{ t('home.controller.cardMode') }}
+      </button>
+      <button
+        type="button"
+        class="glass-chip"
+        :class="{ on: appSettings.app.kernel.sortByDelay }"
+        :aria-pressed="appSettings.app.kernel.sortByDelay"
+        @click="appSettings.app.kernel.sortByDelay = !appSettings.app.kernel.sortByDelay"
+      >
+        {{ t('home.controller.sortBy') }}
+      </button>
+      <Button
+        type="primary"
+        icon="more"
+        class="icon-round"
+        :aria-expanded="showMoreSettings"
+        @click="toggleMoreSettings"
+      />
       <div class="ml-auto flex items-center">
         <Button v-tips="'home.overview.expandAll'" type="text" icon="expand" @click="expandAll" />
         <Button
@@ -249,21 +312,21 @@ onActivated(() => {
   </div>
   <div v-for="group in groups" :key="group.name" class="m-8">
     <div
-      class="sticky z-2 flex gap-8 items-center p-8 rounded-8 backdrop-blur-sm"
-      style="top: 52px; background-color: var(--card-bg)"
+      class="lux-row sticky z-2 flex gap-8 items-center p-8"
+      style="top: 52px"
       @click="toggleExpanded(group.name)"
     >
       <div class="text-14 flex items-center gap-2 text-nowrap overflow-hidden">
         <img v-if="group.icon" :src="group.icon" class="w-24 h-24 mr-4" draggable="false" />
-        <span class="font-bold text-18">{{ group.name }}</span>
+        <span class="font-bold text-18">{{ displayName(group.name) }}</span>
         <span class="mx-8">
-          {{ group.type }}
+          {{ displayType(group.type) }}
         </span>
         <span> :: </span>
         <template v-for="(chain, index) in group.chains" :key="chain">
           <span v-if="index !== 0" style="color: gray"> / </span>
           <Button type="text" size="small" @click.stop="locateGroup(group, chain)">
-            {{ chain }}
+            {{ displayName(chain) }}
           </Button>
         </template>
       </div>
@@ -309,7 +372,7 @@ onActivated(() => {
           <Card
             v-for="proxy in group.all"
             :key="proxy.name"
-            :title="proxy.name"
+            :title="nameKey(proxy.name)"
             :selected="proxy.name === group.now"
             class="cursor-pointer"
             @click="useProxyWithCatchError(group, proxy)"
@@ -326,14 +389,14 @@ onActivated(() => {
                 {{ proxy.delay && proxy.delay + 'ms' }}
               </div>
             </Button>
-            <div class="text-12 my-2">{{ proxy.type }} {{ proxy.udp ? ':: udp' : '' }}</div>
+            <div class="text-12 my-2">{{ displayType(proxy.type) }} {{ proxy.udp ? ':: udp' : '' }}</div>
           </Card>
         </div>
         <div v-else class="grid grid-cols-32 gap-8">
           <div
             v-for="proxy in group.all"
             :key="proxy.name"
-            v-tips.fast="proxy.name"
+            v-tips.fast="nameKey(proxy.name)"
             :style="{ background: delayColor(proxy.delay) }"
             :class="proxy.name === group.now ? 'rounded-full shadow' : ''"
             class="w-12 h-12 rounded-4 flex items-center justify-center"

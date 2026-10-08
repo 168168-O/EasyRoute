@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick } from 'vue'
 
+import bull from '@/assets/bull-crystal.webp'
 import i18n from '@/lang'
 
 interface Props {
@@ -48,12 +49,9 @@ const toggle = () => {
     role="switch"
     @click="toggle"
   >
-    <div
-      :class="[border === 'square' ? 'rounded-4' : 'rounded-full']"
-      class="dot absolute h-18 w-18 duration-200"
-    ></div>
+    <img :src="bull" alt="" draggable="false" class="dot" />
 
-    <div v-if="$slots.default || label" class="slot line-clamp-1 break-all">
+    <div v-if="$slots.default || label" class="slot">
       <span v-if="label">{{ t(label) }}</span>
       <slot v-if="$slots.default"></slot>
     </div>
@@ -62,94 +60,50 @@ const toggle = () => {
 
 <style lang="less" scoped>
 .gui-switch {
-  min-width: 50px;
-  // .slot {
-  //   transition: margin 0.2s;
-  // }
+  box-sizing: border-box;
+  gap: 6px;
+  min-width: 52px;
+  padding: 2px 8px 2px 3px;
+  flex: none;
+
+  .dot {
+    position: relative;
+    top: auto;
+    left: auto;
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    object-fit: cover;
+    pointer-events: none;
+  }
+
+  .slot {
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+
+  &:not(:has(.slot)) {
+    width: 52px;
+    padding: 2px;
+    &.on {
+      justify-content: flex-end;
+    }
+  }
+}
+
+.on:has(.slot) {
+  flex-direction: row-reverse;
+  padding: 2px 3px 2px 8px;
 }
 
 .small {
-  height: 20px;
   .dot {
-    width: 12px;
-    height: 12px;
+    width: 18px;
+    height: 18px;
   }
-}
-
-.square {
-  .dot {
-    width: 4px;
-  }
-}
-
-.on {
-  color: #fff;
-  background-color: var(--switch-on-bg);
-  &:hover {
-    background-color: var(--switch-on-hover-bg);
-  }
-  .dot {
-    left: calc(100% - 22px);
-    background-color: var(--switch-on-dot-bg);
-  }
-
-  .slot {
-    margin-right: 26px;
-    margin-left: 10px;
-  }
-
-  &.small {
-    .dot {
-      left: calc(100% - 16px);
-    }
-    .slot {
-      margin-right: 20px;
-      margin-left: 8px;
-    }
-  }
-
-  &.square {
-    .dot {
-      left: calc(100% - 8px);
-    }
-    .slot {
-      margin-right: 12px;
-      margin-left: 8px;
-    }
-  }
-}
-
-.off {
-  color: var(--card-color);
-  background-color: var(--switch-off-bg);
-  &:hover {
-    background-color: var(--switch-off-hover-bg);
-  }
-  .dot {
-    left: 4px;
-    background-color: var(--switch-off-dot-bg);
-  }
-
-  .slot {
-    margin-left: 26px;
-    margin-right: 10px;
-  }
-
-  &.small {
-    .dot {
-      left: 4px;
-    }
-    .slot {
-      margin-left: 20px;
-      margin-right: 8px;
-    }
-  }
-
-  &.square {
-    .slot {
-      margin-left: 12px;
-      margin-right: 8px;
-    }
+  &:not(:has(.slot)) {
+    width: 46px;
   }
 }
 </style>

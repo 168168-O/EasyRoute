@@ -163,7 +163,8 @@ onUnmounted(() => {
   background: var(--card-bg);
   &:hover {
     color: #fff;
-    background: var(--primary-color);
+    background: rgba(var(--accent-rgb), 0.28);
+    box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.55);
     .type {
       color: #fff;
     }

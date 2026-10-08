@@ -5,6 +5,15 @@
   .text-@{s} {
     font-size: unit(@s, px);
   }
+  html[data-font='small'] .text-@{s} {
+    font-size: unit(@s - 2, px);
+  }
+  html[data-font='large'] .text-@{s} {
+    font-size: unit(@s + 2, px);
+  }
+  html[data-font='xlarge'] .text-@{s} {
+    font-size: unit(@s + 4, px);
+  }
   .generate-text(@i + 1);
 }
 .generate-text();

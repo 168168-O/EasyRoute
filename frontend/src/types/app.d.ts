@@ -63,12 +63,25 @@ declare namespace App {
       exe: string
       mode: AppRouteMode
     }[]
+    /** Saved WeChat / Douyin choice. Only an explicit proxy value leaves 走本地. */
+    pinnedRoutes: {
+      wechat: AppRouteMode
+      douyin: AppRouteMode
+    }
+    /** geosite-cn / geoip-cn from programs set to 走代理 goes direct. Default on. */
+    domesticDirect: boolean
+    /** Nav shows 概览, 软件分流, 订阅, 设置, 翻译. Default on. */
+    simpleMode: boolean
+    exitOnCloseMigrated?: boolean
+    sortByDelayDefaulted?: boolean
+    addGroupToMenuDefaulted?: boolean
     translateHistory: {
       id: string
       input: string
       output: string
       from: string
       to: string
+      provider?: string
       at: number
     }[]
     primaryColor: string

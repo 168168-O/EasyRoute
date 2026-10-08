@@ -10,6 +10,10 @@ export function AbsolutePath(arg1) {
   return window['go']['bridge']['App']['AbsolutePath'](arg1);
 }
 
+export function AutoBackup() {
+  return window['go']['bridge']['App']['AutoBackup']();
+}
+
 export function CloseMMDB(arg1, arg2) {
   return window['go']['bridge']['App']['CloseMMDB'](arg1, arg2);
 }
@@ -32,6 +36,10 @@ export function ExecBackground(arg1, arg2, arg3, arg4, arg5) {
 
 export function ExitApp() {
   return window['go']['bridge']['App']['ExitApp']();
+}
+
+export function ExportBackup(arg1) {
+  return window['go']['bridge']['App']['ExportBackup'](arg1);
 }
 
 export function FileExists(arg1) {
@@ -76,6 +84,10 @@ export function ListProcesses() {
 
 export function ListServer() {
   return window['go']['bridge']['App']['ListServer']();
+}
+
+export function LookupHost(arg1) {
+  return window['go']['bridge']['App']['LookupHost'](arg1);
 }
 
 export function MakeDir(arg1) {
@@ -132,6 +144,10 @@ export function Requests(arg1, arg2, arg3, arg4, arg5) {
 
 export function RestartApp() {
   return window['go']['bridge']['App']['RestartApp']();
+}
+
+export function RestoreBackup(arg1) {
+  return window['go']['bridge']['App']['RestoreBackup'](arg1);
 }
 
 export function SetSystemDNS(arg1, arg2) {

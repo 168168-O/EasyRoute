@@ -20,6 +20,23 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+func (a *App) LookupHost(host string) FlagResult {
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return FlagResult{false, "empty host"}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	ips, err := net.DefaultResolver.LookupHost(ctx, host)
+	if err != nil {
+		return FlagResult{false, err.Error()}
+	}
+	if len(ips) == 0 {
+		return FlagResult{false, "no address"}
+	}
+	return FlagResult{true, ips[0]}
+}
+
 func (a *App) Requests(method string, url string, headers map[string]string, body string, options RequestOptions) HTTPResult {
 	log.Printf("Requests: %v %v %v %v %v", method, url, headers, body, options)
 

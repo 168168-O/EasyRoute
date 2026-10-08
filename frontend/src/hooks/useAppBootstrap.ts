@@ -60,6 +60,8 @@ export const useAppBootstrap = () => {
 
     loading.value = false
     kernelApiStore.initCoreState()
+    // One silent subscription refresh. The 12h task covers the rest. A failure keeps the old nodes.
+    void scheduledTasksStore.runBuiltinSubscriptionUpdate()
   }
 
   initialize().catch(showError)

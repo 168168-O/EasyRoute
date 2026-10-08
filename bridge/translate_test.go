@@ -96,7 +96,8 @@ func TestTranslateBingDirect(t *testing.T) {
 
 	engine := newTranslateEngine(server.Client(), nil)
 	engine.bingPages = []string{server.URL + "/translator"}
-	engine.googleURL = server.URL + "/google"
+	engine.googleURL = "https://clients5.google.com/translate_a/single"
+	engine.myMemoryURL = server.URL + "/mymemory"
 
 	result, err := engine.Translate("Hello", "auto")
 	if err != nil {
@@ -110,14 +111,20 @@ func TestTranslateBingDirect(t *testing.T) {
 	}
 }
 
-func TestTranslateFallsBackToGoogle(t *testing.T) {
+func TestTranslateUsesMyMemoryWhenCoreIsDown(t *testing.T) {
+	var googleHits, memoryHits atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/google") {
-			if r.URL.Query().Get("tl") != "en" {
-				t.Errorf("tl = %q", r.URL.Query().Get("tl"))
+		if strings.Contains(r.URL.Host, "clients5") || strings.Contains(r.URL.Path, "translate_a") {
+			googleHits.Add(1)
+			t.Error("google was dialed while the core was down")
+		}
+		if strings.Contains(r.URL.Path, "/mymemory") {
+			memoryHits.Add(1)
+			if r.URL.Query().Get("langpair") != "zh-CN|en" {
+				t.Errorf("langpair = %q", r.URL.Query().Get("langpair"))
 			}
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = io.WriteString(w, `[[["Hello","你好",null,null,1]],null,"zh-CN"]`)
+			_, _ = io.WriteString(w, `{"responseStatus":200,"responseData":{"translatedText":"Hello"}}`)
 			return
 		}
 		http.Error(w, "bing down", http.StatusBadGateway)
@@ -126,14 +133,18 @@ func TestTranslateFallsBackToGoogle(t *testing.T) {
 
 	engine := newTranslateEngine(server.Client(), nil)
 	engine.bingPages = []string{server.URL + "/translator"}
-	engine.googleURL = server.URL + "/google"
+	engine.googleURL = "https://clients5.google.com/translate_a/single"
+	engine.myMemoryURL = server.URL + "/mymemory"
 
 	result, err := engine.Translate("你好", "auto")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Text != "Hello" || result.Provider != "google" || result.TargetLang != "en" {
+	if result.Text != "Hello" || result.Provider != "mymemory" || result.TargetLang != "en" {
 		t.Fatalf("result = %+v", result)
+	}
+	if memoryHits.Load() == 0 || googleHits.Load() != 0 {
+		t.Fatalf("memory=%d google=%d", memoryHits.Load(), googleHits.Load())
 	}
 }
 
@@ -165,7 +176,8 @@ func TestTranslateUsesProxyOnlyAfterDirectFails(t *testing.T) {
 	proxy := server.Client()
 	engine := newTranslateEngine(direct, proxy)
 	engine.bingPages = []string{server.URL + "/translator"}
-	engine.googleURL = server.URL + "/google"
+	engine.googleURL = "https://clients5.google.com/translate_a/single"
+	engine.myMemoryURL = server.URL + "/mymemory"
 
 	result, err := engine.Translate("Hello", "zh-Hans")
 	if err != nil {
@@ -194,7 +206,8 @@ func TestTranslateEmptyAndTotalFailure(t *testing.T) {
 	defer server.Close()
 	engine = newTranslateEngine(server.Client(), nil)
 	engine.bingPages = []string{server.URL + "/translator"}
-	engine.googleURL = server.URL + "/google"
+	engine.googleURL = "https://clients5.google.com/translate_a/single"
+	engine.myMemoryURL = server.URL + "/mymemory"
 	_, err := engine.Translate("Hello", "auto")
 	if !errors.Is(err, errTranslateBad) && !errors.Is(err, errTranslateDown) {
 		t.Fatalf("err = %v", err)
@@ -229,10 +242,13 @@ func withGoogleSplit(base http.RoundTripper, google http.RoundTripper) http.Roun
 	})
 }
 
-func TestGoogleUsesCoreProxyBeforeDirect(t *testing.T) {
-	var directGoogle, coreGoogle atomic.Int32
+func TestGoogleUsesCoreProxyAndSkipsDirect(t *testing.T) {
+	var directGoogle, coreGoogle, memoryHits atomic.Int32
 	directSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "bing down", http.StatusBadGateway)
+		if strings.Contains(r.URL.Path, "/mymemory") {
+			memoryHits.Add(1)
+		}
+		http.Error(w, "not used", http.StatusBadGateway)
 	}))
 	defer directSrv.Close()
 
@@ -242,9 +258,10 @@ func TestGoogleUsesCoreProxyBeforeDirect(t *testing.T) {
 	engine := newTranslateEngine(direct, nil)
 	engine.core = core
 	engine.bingPages = []string{directSrv.URL + "/translator"}
-	engine.googleURL = "https://translate.googleapis.com/translate_a/single"
+	engine.googleURL = "https://clients5.google.com/translate_a/single"
+	engine.myMemoryURL = directSrv.URL + "/mymemory"
 
-	result, err := engine.Translate("Hello", "auto")
+	result, err := engine.Translate("DM me the price", "auto")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,35 +271,46 @@ func TestGoogleUsesCoreProxyBeforeDirect(t *testing.T) {
 	if coreGoogle.Load() == 0 {
 		t.Fatal("google was not sent through the core proxy")
 	}
-	if directGoogle.Load() != 0 {
-		t.Fatal("direct client was used for google while the core proxy succeeded")
+	if directGoogle.Load() != 0 || memoryHits.Load() != 0 {
+		t.Fatalf("direct google=%d mymemory=%d", directGoogle.Load(), memoryHits.Load())
 	}
 }
 
-func TestGoogleFallsBackToDirectWhenCoreProxyFails(t *testing.T) {
-	var directGoogle, coreGoogle atomic.Int32
+func TestGoogleProxyFailureUsesMyMemoryNotDirect(t *testing.T) {
+	var directGoogle, coreGoogle, memoryHits atomic.Int32
 	directSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/mymemory") {
+			memoryHits.Add(1)
+			if pair := r.URL.Query().Get("langpair"); pair != "en|zh-CN" {
+				t.Errorf("langpair = %q", pair)
+			}
+			_, _ = io.WriteString(w, `{"responseStatus":200,"responseData":{"translatedText":"给我发价格"}}`)
+			return
+		}
 		http.Error(w, "bing down", http.StatusBadGateway)
 	}))
 	defer directSrv.Close()
 
-	const googleBody = `[[["你好","Hello",null,null,1]],null,"en"]`
-	direct := &http.Client{Transport: withGoogleSplit(directSrv.Client().Transport, googleResponse(http.StatusOK, googleBody, &directGoogle)), Timeout: 2 * time.Second}
+	direct := &http.Client{Transport: withGoogleSplit(directSrv.Client().Transport, googleResponse(http.StatusOK, `[[["direct should not run"]]]`, &directGoogle)), Timeout: 2 * time.Second}
 	core := &http.Client{Transport: googleResponse(http.StatusBadGateway, "down", &coreGoogle), Timeout: 2 * time.Second}
 	engine := newTranslateEngine(direct, nil)
 	engine.core = core
 	engine.bingPages = []string{directSrv.URL + "/translator"}
-	engine.googleURL = "https://translate.googleapis.com/translate_a/single"
+	engine.googleURL = "https://clients5.google.com/translate_a/single"
+	engine.myMemoryURL = directSrv.URL + "/mymemory"
 
-	result, err := engine.Translate("Hello", "auto")
+	result, err := engine.Translate("DM me the price", "auto")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Provider != "google" || result.Text != "你好" {
+	if result.Provider != "mymemory" || result.Text != "给我发价格" {
 		t.Fatalf("result = %+v", result)
 	}
-	if coreGoogle.Load() == 0 || directGoogle.Load() == 0 {
-		t.Fatalf("core=%d direct=%d", coreGoogle.Load(), directGoogle.Load())
+	if coreGoogle.Load() == 0 || memoryHits.Load() == 0 {
+		t.Fatalf("core=%d memory=%d", coreGoogle.Load(), memoryHits.Load())
+	}
+	if directGoogle.Load() != 0 {
+		t.Fatal("google direct was attempted after the proxy failed")
 	}
 }
 
@@ -301,7 +329,8 @@ func TestBingStaysDirectWhenCoreProxyIsSet(t *testing.T) {
 	engine := newTranslateEngine(directSrv.Client(), nil)
 	engine.core = &http.Client{Transport: googleResponse(http.StatusBadGateway, "no", &coreHits), Timeout: 2 * time.Second}
 	engine.bingPages = []string{directSrv.URL + "/translator"}
-	engine.googleURL = "https://translate.googleapis.com/translate_a/single"
+	engine.googleURL = "https://clients5.google.com/translate_a/single"
+	engine.myMemoryURL = directSrv.URL + "/mymemory"
 
 	result, err := engine.Translate("Hello", "auto")
 	if err != nil {
@@ -310,7 +339,57 @@ func TestBingStaysDirectWhenCoreProxyIsSet(t *testing.T) {
 	if result.Provider != "bing" || result.Text != "你好" {
 		t.Fatalf("result = %+v", result)
 	}
-	if coreHits.Load() != 0 {
-		t.Fatalf("bing used the core proxy, hits=%d", coreHits.Load())
+	if coreHits.Load() == 0 {
+		t.Fatal("google was not tried through the core before the direct fallback")
+	}
+}
+
+func TestParseMyMemory(t *testing.T) {
+	text, err := parseMyMemory([]byte(`{"responseStatus":200,"responseData":{"translatedText":"Tom&#39;s price"}}`))
+	if err != nil || text != "Tom's price" {
+		t.Fatalf("text=%q err=%v", text, err)
+	}
+	if _, err = parseMyMemory([]byte(`{"responseStatus":200,"responseData":{"translatedText":"MYMEMORY WARNING: YOU USED ALL AVAILABLE FREE TRANSLATIONS FOR TODAY"}}`)); err == nil {
+		t.Fatal("warning was accepted")
+	}
+}
+
+func TestMyMemoryLangPairForSlang(t *testing.T) {
+	if got := myMemorySource("DM me the price", ""); got != "en" {
+		t.Fatalf("source = %q", got)
+	}
+	if got := myMemoryLang("zh-Hans"); got != "zh-CN" {
+		t.Fatalf("target = %q", got)
+	}
+}
+
+func TestTranslateWorstCaseStaysUnderBudget(t *testing.T) {
+	block := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		<-req.Context().Done()
+		return nil, req.Context().Err()
+	})
+	var directGoogle atomic.Int32
+	direct := &http.Client{Transport: withGoogleSplit(block, googleResponse(http.StatusOK, `[[["should not run"]]]`, &directGoogle)), Timeout: 20 * time.Second}
+	core := &http.Client{Transport: block, Timeout: 20 * time.Second}
+	engine := newTranslateEngine(direct, nil)
+	engine.core = core
+	engine.googleURL = "https://clients5.google.com/translate_a/single"
+	engine.myMemoryURL = "https://api.mymemory.translated.net/get"
+	engine.bingPages = []string{"https://cn.bing.com/translator"}
+
+	start := time.Now()
+	_, err := engine.Translate("Hello", "auto")
+	elapsed := time.Since(start)
+	if err == nil {
+		t.Fatal("expected a failure when every engine hangs")
+	}
+	if elapsed > 9*time.Second {
+		t.Fatalf("worst case took %s", elapsed)
+	}
+	if elapsed < 7*time.Second {
+		t.Fatalf("chain returned in %s, before the 8s budget", elapsed)
+	}
+	if directGoogle.Load() != 0 {
+		t.Fatal("a hanging google direct attempt was started")
 	}
 }

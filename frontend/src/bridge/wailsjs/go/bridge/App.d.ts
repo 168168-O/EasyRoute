@@ -6,6 +6,8 @@ export function BackgroundVideoURL():Promise<bridge.FlagResult>;
 
 export function AbsolutePath(arg1:string):Promise<bridge.FlagResult>;
 
+export function AutoBackup():Promise<bridge.FlagResult>;
+
 export function CloseMMDB(arg1:string,arg2:string):Promise<bridge.FlagResult>;
 
 export function CopyFile(arg1:string,arg2:string):Promise<bridge.FlagResult>;
@@ -17,6 +19,8 @@ export function Exec(arg1:string,arg2:Array<string>,arg3:bridge.ExecOptions):Pro
 export function ExecBackground(arg1:string,arg2:Array<string>,arg3:string,arg4:string,arg5:bridge.ExecOptions):Promise<bridge.FlagResult>;
 
 export function ExitApp():Promise<void>;
+
+export function ExportBackup(arg1:string):Promise<bridge.FlagResult>;
 
 export function FileExists(arg1:string):Promise<bridge.FlagResult>;
 
@@ -39,6 +43,8 @@ export function ListDouyinExes():Promise<bridge.FlagResult>;
 export function ListProcesses():Promise<bridge.FlagResult>;
 
 export function ListServer():Promise<bridge.FlagResult>;
+
+export function LookupHost(arg1:string):Promise<bridge.FlagResult>;
 
 export function MakeDir(arg1:string):Promise<bridge.FlagResult>;
 
@@ -67,6 +73,8 @@ export function RemoveFile(arg1:string):Promise<bridge.FlagResult>;
 export function Requests(arg1:string,arg2:string,arg3:Record<string, string>,arg4:string,arg5:bridge.RequestOptions):Promise<bridge.HTTPResult>;
 
 export function RestartApp():Promise<bridge.FlagResult>;
+
+export function RestoreBackup(arg1:string):Promise<bridge.FlagResult>;
 
 export function SetSystemDNS(arg1:string,arg2:Array<string>):Promise<bridge.FlagResult>;
 
