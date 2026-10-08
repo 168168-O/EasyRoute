@@ -312,8 +312,8 @@ onActivated(() => {
   </div>
   <div v-for="group in groups" :key="group.name" class="m-8">
     <div
-      class="sticky z-2 flex gap-8 items-center p-8 rounded-8"
-      style="top: 52px; background-color: var(--card-bg)"
+      class="lux-row sticky z-2 flex gap-8 items-center p-8"
+      style="top: 52px"
       @click="toggleExpanded(group.name)"
     >
       <div class="text-14 flex items-center gap-2 text-nowrap overflow-hidden">
