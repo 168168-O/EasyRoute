@@ -22,7 +22,7 @@ import {
 } from '@/stores'
 import { applyAppRouting, type RoutedProgram } from '@/utils/appRouting'
 import { attachCountryGroups } from '@/utils/countryGroups'
-import { FREE_KEEP, FREE_NODE_SUB_ID, attachFreeGroup, expandsFreeSubscription, isProxyOutbound } from '@/utils/freeNodes'
+import { FREE_KEEP, FREE_NODE_SUB_ID, attachFreeGroup, expandsFreeSubscription, parseFreeSource } from '@/utils/freeNodes'
 import { deepAssign, deepClone, APP_TITLE, createTextMatcher } from '@/utils'
 
 const _generateRule = (
@@ -207,17 +207,14 @@ const generateOutbounds = async (outbounds: App.Outbound[]) => {
   let freeNodes: Recordable[] = []
   if (freeSub && !freeSub.disabled) {
     try {
-      const stored = JSON.parse(await ReadFile(freeSub.path))
-      if (Array.isArray(stored)) {
-        const allowed = new Set(freeSub.proxies.map((item) => item.tag))
-        const byTag = new Map(
-          stored.filter(isProxyOutbound).map((item) => [String(item.tag || ''), item]),
-        )
-        freeNodes = freeSub.proxies
-          .map((item) => byTag.get(item.tag))
-          .filter((item): item is Recordable => !!item && allowed.has(String(item.tag || '')))
-          .slice(0, FREE_KEEP)
-      }
+      const stored = parseFreeSource(await ReadFile(freeSub.path))
+      const allowed = new Set(freeSub.proxies.map((item) => item.tag))
+      const byTag = new Map(stored.map((item) => [String(item.tag || ''), item]))
+      freeNodes = freeSub.proxies.flatMap((item) => {
+        const node = byTag.get(item.tag)
+        if (!node || !allowed.has(String(node.tag || ''))) return []
+        return [node]
+      }).slice(0, FREE_KEEP)
     } catch {
       freeNodes = []
     }

@@ -87,6 +87,136 @@ test('source dns and rules are dropped and parsing stops around 100 nodes', () =
   assert.equal(again.length, 100)
 })
 
+test('a free source cannot import its own dns, rules, or dialer', () => {
+  const body = JSON.stringify({
+    log: { level: 'debug' },
+    experimental: { cache_file: { enabled: true } },
+    inbounds: [{ type: 'tun', tag: 'tun-in' }],
+    dns: {
+      servers: [{ type: 'udp', tag: 'source-dns', server: '1.1.1.1' }],
+      rules: [{ domain_suffix: ['weixin.com'], server: 'source-dns' }],
+      final: 'source-dns',
+    },
+    route: {
+      rules: [
+        { domain_suffix: ['weixin.com', 'douyin.com'], outbound: 'source-final' },
+        { domain_suffix: ['baidu.com'], outbound: 'source-proxy' },
+      ],
+      final: 'source-final',
+    },
+    outbounds: [
+      { type: 'direct', tag: 'direct' },
+      { type: 'dns', tag: 'dns-out' },
+      { type: 'selector', tag: 'source-proxy', outbounds: ['hijack'] },
+      {
+        type: 'trojan',
+        tag: 'hijack',
+        server: 'free.example',
+        server_port: 443,
+        password: 'secret',
+        detour: 'direct',
+        domain_resolver: { server: 'source-dns', strategy: 'ipv4_only' },
+        domain_strategy: 'ipv4_only',
+        routing_mark: 4321,
+        bind_interface: 'eth0',
+        tls: { enabled: true, server_name: 'free.example' },
+      },
+    ],
+  })
+  const yaml = [
+    'dns:',
+    '  enable: true',
+    '  nameserver:',
+    '    - 8.8.8.8',
+    'rules:',
+    '  - DOMAIN-SUFFIX,weixin.com,PROXY',
+    '  - MATCH,PROXY',
+    'proxy-groups:',
+    '  - name: PROXY',
+    '    type: select',
+    '    proxies: [节点]',
+    'proxies:',
+    '  - name: 节点',
+    '    type: trojan',
+    '    server: clash.example',
+    '    port: 443',
+    '    password: clash-secret',
+    '    dialer-proxy: other',
+    '',
+  ].join('\n')
+
+  const nodes = collectFreeCandidates([parseFreeSource(body), parseFreeSource(yaml)])
+  assert.equal(nodes.length, 2)
+  for (const node of nodes) {
+    assert.equal(node.detour, undefined)
+    assert.equal(node.domain_resolver, undefined)
+    assert.equal(node.domain_strategy, undefined)
+    assert.equal(node.routing_mark, undefined)
+    assert.equal(node.bind_interface, undefined)
+    assert.equal('dialer-proxy' in node, false)
+    assert.equal('route' in node, false)
+    assert.equal('dns' in node, false)
+    assert.equal('rules' in node, false)
+  }
+  assert.equal(nodes[0]?.server, 'free.example')
+  assert.equal(nodes[0]?.password, 'secret')
+  assert.equal((nodes[0]?.tls as { server_name?: string }).server_name, 'free.example')
+  assert.equal(nodes[1]?.server, 'clash.example')
+  assert.equal(nodes[1]?.password, 'clash-secret')
+
+  const base = sampleBaseConfig()
+  base.route.rules = [
+    { action: 'route', clash_mode: 'global', outbound: 'direct' },
+    { action: 'route', rule_set: 'geosite-cn', outbound: 'direct' },
+  ]
+  base.route.final = 'direct'
+  base.outbounds = attachFreeGroup(
+    [
+      { type: 'selector', tag: '🚀 节点选择', outbounds: ['🎈 自动选择', 'direct'] },
+      { type: 'urltest', tag: '🎈 自动选择', outbounds: ['paid'] },
+      { type: 'trojan', tag: 'paid', server: 'paid.example', server_port: 443, password: 'p' },
+      { type: 'direct', tag: 'direct' },
+    ],
+    nodes,
+  ) as typeof base.outbounds
+  const routed = applyAppRouting(base, {
+    programs: [{ id: 'chrome', name: 'Chrome', exe: 'chrome.exe', mode: 'proxy' }],
+    pinnedRoutes: { wechat: 'direct', douyin: 'direct' },
+    domesticDirect: true,
+  })
+  const rules = routed.route.rules as Record<string, unknown>[]
+  const outboundFor = (name: string) =>
+    rules.find((rule) => {
+      const value = rule.process_name
+      const list = Array.isArray(value) ? value.map(String) : value ? [String(value)] : []
+      return rule.action === 'route' && !rule.rule_set && list.includes(name)
+    })?.outbound
+  assert.equal(outboundFor('Weixin.exe'), 'direct')
+  assert.equal(outboundFor('douyin.exe'), 'direct')
+  assert.equal(outboundFor('chrome.exe'), '🚀 节点选择')
+  assert.equal(routed.route.final, 'direct')
+  const cn = rules.find(
+    (rule) => rule.rule_set === 'geosite-cn' || (Array.isArray(rule.rule_set) && rule.rule_set.includes('geosite-cn')),
+  )
+  assert.equal(cn?.outbound, 'direct')
+  const dumped = JSON.stringify(routed)
+  assert.equal(dumped.includes('source-dns'), false)
+  assert.equal(dumped.includes('source-final'), false)
+  assert.equal(dumped.includes('1.1.1.1'), false)
+  assert.equal(dumped.includes('weixin.com'), false)
+  assert.equal(dumped.includes('8.8.8.8'), true)
+  const imported = (routed.outbounds as Record<string, unknown>[]).filter((item) =>
+    String(item.tag || '').startsWith('free-'),
+  )
+  assert.equal(imported.length, 2)
+  for (const item of imported) {
+    assert.equal(item.detour, undefined)
+    assert.equal(item.domain_resolver, undefined)
+    assert.equal(item.routing_mark, undefined)
+  }
+  assert.equal((routed.outbounds as Record<string, unknown>[]).some((item) => item.type === 'dns'), false)
+})
+
 test('only the five fastest working nodes are kept', () => {
   const ranked = rankFreeNodes([
     node('free-a', 'a.example', 80),

@@ -27,6 +27,32 @@ export const FREE_NODE_SOURCES = [
 
 const GROUP_TYPES = new Set(['selector', 'urltest', 'direct', 'block', 'dns', 'reject', 'shadowsocksr'])
 
+/** Source dialer, DNS, and config keys. They must not override 软件分流. */
+const FREE_ROUTING_KEYS = [
+  'detour',
+  'domain_resolver',
+  'domain_strategy',
+  'bind_interface',
+  'inet4_bind_address',
+  'inet6_bind_address',
+  'routing_mark',
+  'routing-mark',
+  'reuse_addr',
+  'netns',
+  'route',
+  'dns',
+  'rules',
+  'rule_set',
+  'inbounds',
+  'endpoints',
+  'experimental',
+  'outbounds',
+  'log',
+  'dialer-proxy',
+  'dialer_proxy',
+  'interface-name',
+] as const
+
 export const freeNodeSources = (sub: { urls?: string[]; url?: string }) => {
   const listed = (sub.urls || []).map((item) => item.trim()).filter(Boolean)
   if (listed.length) return listed
@@ -58,6 +84,23 @@ const uniqueTag = (tag: string, used: Set<string>) => {
   return name
 }
 
+/** Keep the proxy fields and drop anything that would import the source's routing or DNS. */
+export const sanitizeFreeOutbound = (item: {
+  type?: string
+  tag?: string
+  server?: string
+  server_port?: number
+  [key: string]: unknown
+}): SingboxOutbound | undefined => {
+  if (!item || typeof item !== 'object' || !isProxyOutbound(item)) return undefined
+  const next = { ...item, type: String(item.type), tag: String(item.tag || '') } as SingboxOutbound
+  for (const key of FREE_ROUTING_KEYS) delete next[key]
+  return next
+}
+
+const onlyFreeNodes = (list: SingboxOutbound[]) =>
+  list.map((item) => sanitizeFreeOutbound(item)).filter((item): item is SingboxOutbound => !!item)
+
 /** Outbound definitions only. DNS, route rules, and group entries from the source are dropped. */
 export const parseFreeSource = (body: string): SingboxOutbound[] => {
   const text = String(body || '').trim()
@@ -66,7 +109,7 @@ export const parseFreeSource = (body: string): SingboxOutbound[] => {
     try {
       const parsed = JSON.parse(text) as { outbounds?: unknown; proxies?: unknown }
       const list = Array.isArray(parsed) ? parsed : parsed.outbounds || parsed.proxies
-      if (Array.isArray(list)) return normalizeSubscriptionProxies(list).filter(isProxyOutbound)
+      if (Array.isArray(list)) return onlyFreeNodes(normalizeSubscriptionProxies(list))
     } catch {
       // try the other shapes below
     }
@@ -79,7 +122,7 @@ export const parseFreeSource = (body: string): SingboxOutbound[] => {
         : Array.isArray(parsed?.outbounds)
           ? parsed.outbounds
           : null
-      if (list) return normalizeSubscriptionProxies(list as Record<string, any>[]).filter(isProxyOutbound)
+      if (list) return onlyFreeNodes(normalizeSubscriptionProxies(list as Record<string, any>[]))
     } catch {
       // fall through to share links
     }
@@ -87,12 +130,12 @@ export const parseFreeSource = (body: string): SingboxOutbound[] => {
   const compact = text.replace(/\s+/g, '')
   if (compact.length > 16 && !text.includes('://')) {
     try {
-      return parseShareText(decodeBase64Text(text)).filter(isProxyOutbound)
+      return onlyFreeNodes(parseShareText(decodeBase64Text(text)))
     } catch {
       return []
     }
   }
-  return parseShareText(text).filter(isProxyOutbound)
+  return onlyFreeNodes(parseShareText(text))
 }
 
 export const collectFreeCandidates = (batches: SingboxOutbound[][], cap = FREE_PARSE_CAP) => {
@@ -101,11 +144,12 @@ export const collectFreeCandidates = (batches: SingboxOutbound[][], cap = FREE_P
   const result: SingboxOutbound[] = []
   for (const batch of batches) {
     for (const item of batch) {
-      if (!isProxyOutbound(item)) continue
-      const key = `${String(item.type).toLowerCase()}|${item.server}|${item.server_port}`
+      const clean = sanitizeFreeOutbound(item)
+      if (!clean) continue
+      const key = `${String(clean.type).toLowerCase()}|${clean.server}|${clean.server_port}`
       if (seen.has(key)) continue
       seen.add(key)
-      result.push({ ...item, tag: uniqueTag(String(item.tag || ''), usedTags) })
+      result.push({ ...clean, tag: uniqueTag(String(clean.tag || ''), usedTags) })
       if (result.length >= cap) return result
     }
   }
@@ -128,7 +172,8 @@ export const rankFreeNodes = (results: ProbeResult[], keep = FREE_KEEP) =>
     .filter(isWorkingFreeProbe)
     .sort((a, b) => a.delayMs - b.delayMs || a.node.tag.localeCompare(b.node.tag))
     .slice(0, keep)
-    .map((item) => item.node)
+    .map((item) => sanitizeFreeOutbound(item.node))
+    .filter((item): item is SingboxOutbound => !!item)
 
 /**
  * A real retest stores only the fastest working nodes.
@@ -136,7 +181,10 @@ export const rankFreeNodes = (results: ProbeResult[], keep = FREE_KEEP) =>
  * candidate fills that slot. If the probe never ran, the previous nodes stay.
  */
 export const decideFreeList = (previous: SingboxOutbound[], results: ProbeResult[], keep = FREE_KEEP) => {
-  const keptBefore = previous.filter(isProxyOutbound).slice(0, keep)
+  const keptBefore = previous
+    .map((item) => sanitizeFreeOutbound(item))
+    .filter((item): item is SingboxOutbound => !!item)
+    .slice(0, keep)
   const tested = results.some((item) => !item.unavailable)
   if (!tested) return { replace: false as const, proxies: keptBefore }
   return { replace: true as const, proxies: rankFreeNodes(results, keep) }

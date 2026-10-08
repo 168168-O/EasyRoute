@@ -11,8 +11,8 @@ import {
   decideFreeList,
   dueForFreeRefresh,
   freeNodeSources,
-  isProxyOutbound,
   parseFreeSource,
+  sanitizeFreeOutbound,
 } from './freeNodes.ts'
 import { probeFreeNode } from './freeNodeProbe.ts'
 import type { SingboxOutbound } from './subscriptionConvert.ts'
@@ -70,7 +70,10 @@ export const refreshFreeBackup = async () => {
   if (!dueForFreeRefresh(sub.updateTime)) return false
 
   const raw = await readStored(sub.path)
-  const previous = raw.filter(isProxyOutbound).slice(0, FREE_KEEP)
+  const previous = raw
+    .map((item) => sanitizeFreeOutbound(item))
+    .filter((item): item is SingboxOutbound => !!item)
+    .slice(0, FREE_KEEP)
   const batches: SingboxOutbound[][] = [previous]
   for (const url of freeNodeSources(sub)) {
     try {
