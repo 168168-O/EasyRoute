@@ -40,6 +40,8 @@ export function ListProcesses():Promise<bridge.FlagResult>;
 
 export function ListServer():Promise<bridge.FlagResult>;
 
+export function LookupHost(arg1:string):Promise<bridge.FlagResult>;
+
 export function MakeDir(arg1:string):Promise<bridge.FlagResult>;
 
 export function MoveFile(arg1:string,arg2:string):Promise<bridge.FlagResult>;

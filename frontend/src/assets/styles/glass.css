@@ -541,11 +541,86 @@ body:not([theme-mode='light']) #app .font-bold {
 
 .home-stat-card__value,
 .home-stat-card__value span,
-.metric {
+.metric,
+.network-check .nc-value {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
   letter-spacing: 0;
 }
+
+.home-scroll {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.home-view > .overflow-y-auto {
+  justify-content: safe center;
+}
+
+.network-check-slot {
+  max-width: 560px;
+}
+
+.network-check .nc-idle {
+  margin: 0;
+  padding: 4px 0 8px;
+  color: #c5d0dc;
+  font-size: 13px;
+}
+
+.network-check .nc-list,
+.network-check .nc-sites {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.network-check .nc-list {
+  padding: 4px 0 8px;
+}
+
+.network-check .nc-sites {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(var(--accent-2-rgb), 0.38);
+}
+
+.network-check .nc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+}
+
+.network-check .nc-name {
+  color: #fff;
+  font-size: 14px;
+  flex: none;
+}
+
+.network-check .nc-value {
+  margin-left: auto;
+  color: #c5d0dc;
+  font-size: 13px;
+  text-align: right;
+}
+
+.nc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8fa0b3;
+  flex: none;
+}
+
+.nc-dot.green { background: #34c778; }
+.nc-dot.amber { background: #e2b340; }
+.nc-dot.red { background: #e25b5b; }
+
+body[theme-mode='light'] .network-check .nc-name { color: #142033; }
+body[theme-mode='light'] .network-check .nc-value,
+body[theme-mode='light'] .network-check .nc-idle { color: #3c4c60; }
 
 #app .gui-button,
 #app .main-nav__button,

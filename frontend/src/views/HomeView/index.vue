@@ -9,11 +9,13 @@ import { APP_TITLE, debounce, message, modal } from '@/utils'
 
 import GroupsController from './components/GroupsController.vue'
 import KernelLogs from './components/KernelLogs.vue'
+import NetworkCheck from './components/NetworkCheck.vue'
 import OverView from './components/OverView.vue'
 import QuickStart from './components/QuickStart.vue'
 
 const showController = ref(false)
 const controllerRef = useTemplateRef('controllerRef')
+const overviewScrollRef = useTemplateRef<HTMLElement>('overviewScrollRef')
 
 const { t } = useI18n()
 
@@ -52,6 +54,13 @@ const resetScrollEventCount = debounce(() => (scrollEventCount = 0), 100)
 const onMouseWheel = (e: WheelEvent) => {
   if (!kernelApiStore.running) return
 
+  const scroller = overviewScrollRef.value
+  if (scroller && scroller.scrollHeight > scroller.clientHeight + 1) {
+    const atTop = scroller.scrollTop <= 0
+    const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1
+    if ((e.deltaY > 0 && !atBottom) || (e.deltaY < 0 && !atTop)) return
+  }
+
   const isScrollingDown = e.deltaY > 0
 
   if (
@@ -83,7 +92,7 @@ watch(showController, (v) => {
   <div class="home-view relative overflow-hidden h-full" @wheel.passive="onMouseWheel">
     <div
       v-if="(!kernelApiStore.running && !kernelApiStore.stopping) || kernelApiStore.starting"
-      class="w-full h-[90%] flex flex-col items-center justify-center"
+      class="w-full h-[90%] flex flex-col items-center justify-center overflow-y-auto"
     >
       <img :src="logo" draggable="false" class="empty-mark mb-16" alt="" />
 
@@ -144,10 +153,13 @@ watch(showController, (v) => {
           {{ t('home.overview.viewlog') }}
         </Button>
       </template>
+      <div class="network-check-slot w-full mt-16 px-16">
+        <NetworkCheck />
+      </div>
     </div>
 
     <template v-else-if="!kernelApiStore.coreStateLoading">
-      <div>
+      <div ref="overviewScrollRef" class="home-scroll">
         <OverView />
         <Divider class="controller-trigger">
           <Button type="link" size="small" @click="showController = true">

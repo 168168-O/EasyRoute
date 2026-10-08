@@ -78,6 +78,10 @@ export function ListServer() {
   return window['go']['bridge']['App']['ListServer']();
 }
 
+export function LookupHost(arg1) {
+  return window['go']['bridge']['App']['LookupHost'](arg1);
+}
+
 export function MakeDir(arg1) {
   return window['go']['bridge']['App']['MakeDir'](arg1);
 }

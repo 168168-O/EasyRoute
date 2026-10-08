@@ -19,6 +19,8 @@ export const UpdateTrayMenus = Bridge.UpdateTrayMenus
 
 export const UpdateTrayAndMenus = Bridge.UpdateTrayAndMenus
 
+export const LookupHost = (host: string) => Bridge.LookupHost(host)
+
 export const GetEnv = <T extends string | undefined = undefined>(
   key?: T,
 ): Promise<T extends string ? string : App.AppEnv> => {

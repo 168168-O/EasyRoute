@@ -38,6 +38,45 @@ export const installPreviewBridge = () => {
     MakeDir: () => ok('ok'),
     ListProcesses: () => ok(JSON.stringify(processes)),
     ListDouyinExes: () => ok('[]'),
+    LookupHost: async (host) => {
+      try {
+        const res = await fetch(`./__preview/lookup?host=${encodeURIComponent(String(host || ''))}`)
+        const data = (await res.json()) as { flag?: boolean; address?: string; error?: string }
+        return data.flag && data.address ? ok(data.address) : { flag: false, data: data.error || 'no address' }
+      } catch (error) {
+        return { flag: false, data: String(error) }
+      }
+    },
+    Requests: async (...args: unknown[]) => {
+      const url = String(args[1] || '')
+      const options = (args[4] || {}) as { Proxy?: string; Timeout?: number }
+      const timeoutMs = Math.max(1, Number(options?.Timeout) || 4) * 1000
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), timeoutMs)
+      try {
+        if (options?.Proxy && options.Proxy !== 'direct') {
+          return { flag: false, status: 0, headers: {}, body: 'preview has no running core' }
+        }
+        const response = await fetch(`./__preview/http?url=${encodeURIComponent(url)}`, { signal: controller.signal })
+        const data = (await response.json()) as {
+          flag?: boolean
+          status?: number
+          contentType?: string
+          body?: string
+        }
+        if (!data.flag) return { flag: false, status: 0, headers: {}, body: data.body || 'request failed' }
+        return {
+          flag: true,
+          status: data.status || 0,
+          headers: { 'Content-Type': [data.contentType || 'text/plain'] },
+          body: data.body || '',
+        }
+      } catch (error) {
+        return { flag: false, status: 0, headers: {}, body: String(error) }
+      } finally {
+        clearTimeout(timer)
+      }
+    },
     PickFile: () => Promise.resolve({ flag: false, data: 'cancelled' }),
     BackgroundVideoURL: () => Promise.resolve({ flag: false, data: 'none' }),
     Translate: (text, target) => {
