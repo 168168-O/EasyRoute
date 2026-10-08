@@ -30,7 +30,7 @@ const writeAck = (keys: string[]) => {
   }
 }
 
-const items = ref<SecurityAlertItem[]>([])
+const items = ref<SecurityItem[]>([])
 const acked = ref<string[]>(typeof localStorage === 'undefined' ? [] : readAck())
 
 export const securityAlertItems = items

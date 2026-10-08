@@ -3,13 +3,14 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { getConnections, getProxies } from '@/api/kernel'
-import { BrowserOpenURL, HttpGet, LookupHost, SecurityCheck, type SecurityReport } from '@/bridge'
+import { BrowserOpenURL, HttpGet, LookupHost, SecurityCheck } from '@/bridge'
 import { useAppSettingsStore, useKernelApiStore } from '@/stores'
 import { explainDomainRoute, normalizePinnedRoutes, type RouteExplanation } from '@/utils/appRouting'
 import {
   acknowledgeSecurityItem,
   publishSecurityItems,
   securityAlerting,
+  securityAlertItems,
   securityItemAlerting,
 } from '@/utils/securityAlertState'
 import { message } from '@/utils'
@@ -25,7 +26,6 @@ import {
 
 const report = ref<NetworkCheckReport | null>(null)
 const running = ref(false)
-const security = ref<SecurityReport | null>(null)
 const securityRunning = ref(false)
 const domain = ref('')
 const routeRows = ref<RouteExplanation[]>([])
@@ -151,8 +151,8 @@ const runSecurity = async () => {
   try {
     const port = Number(kernel.config['mixed-port'] || 0)
     const tun = kernel.config.tun?.device || 'tun0'
-    security.value = await SecurityCheck(port, tun)
-    publishSecurityItems(security.value.items || [])
+    const found = await SecurityCheck(port, tun)
+    publishSecurityItems(found.items || [])
   } catch (error) {
     message.error(error)
   } finally {
@@ -208,10 +208,10 @@ const coreText = computed(() => {
         {{ t(link.label) }}
       </button>
     </div>
-    <p v-if="!security" class="nc-idle">{{ t('home.networkCheck.securityIdle') }}</p>
+    <p v-if="!securityAlertItems.length" class="nc-idle">{{ t('home.networkCheck.securityIdle') }}</p>
     <div v-else class="nc-list nc-security">
       <div
-        v-for="item in security.items"
+        v-for="item in securityAlertItems"
         :key="item.id"
         class="nc-row"
         :class="{ 'is-red': item.level === 'red', 'nc-alert': securityItemAlerting(item) }"

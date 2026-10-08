@@ -3,6 +3,7 @@ import { onUnmounted } from 'vue'
 import { EventsOn, WindowHide } from '@/bridge'
 import * as Stores from '@/stores'
 import { exitApp, message, modal, sampleID } from '@/utils'
+import { bindSecurityAuto } from '@/utils/securityAuto'
 
 import CommandView from '@/components/_common/CommandView.vue'
 
@@ -50,6 +51,7 @@ export const useAppLifecycle = () => {
   })
 
   const offExitApp = EventsOn('onExitApp', () => exitApp())
+  const stopSecurityAuto = bindSecurityAuto()
 
   const handleKeydown = (event: KeyboardEvent) => {
     if (((event.ctrlKey && event.shiftKey) || event.metaKey) && event.code === 'KeyP') {
@@ -88,6 +90,7 @@ export const useAppLifecycle = () => {
     offLaunchApp()
     offBeforeExitApp()
     offExitApp()
+    stopSecurityAuto()
     window.removeEventListener('keydown', handleKeydown)
   })
 }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, watch, useTemplateRef } from 'vue'
+import { ref, watch, useTemplateRef, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import logo from '@/assets/logo'
 import { ControllerCloseMode } from '@/enums/app'
 import { useAppSettingsStore, useProfilesStore, useKernelApiStore } from '@/stores'
 import { APP_TITLE, debounce, message, modal } from '@/utils'
+import { SECURITY_FOCUS } from '@/utils/securityFocus'
 
 import GroupsController from './components/GroupsController.vue'
 import KernelLogs from './components/KernelLogs.vue'
@@ -79,6 +80,16 @@ const onMouseWheel = (e: WheelEvent) => {
 
   resetScrollEventCount()
 }
+
+const focusSecurity = () => {
+  showController.value = false
+  const scroll = () => document.querySelector('.network-check')?.scrollIntoView({ block: 'center' })
+  void nextTick(scroll)
+  window.setTimeout(scroll, 450)
+}
+
+onMounted(() => window.addEventListener(SECURITY_FOCUS, focusSecurity))
+onUnmounted(() => window.removeEventListener(SECURITY_FOCUS, focusSecurity))
 
 watch(showController, (v) => {
   if (v) {

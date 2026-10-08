@@ -78,12 +78,17 @@ func main() {
 			}(),
 			OnSecondInstanceLaunch: func(data options.SecondInstanceData) {
 				runtime.Show(app.Ctx)
+				if bridge.ArgsOpenSecurity(data.Args) {
+					runtime.EventsEmit(app.Ctx, "onSecurityNotice")
+					return
+				}
 				runtime.EventsEmit(app.Ctx, "onLaunchApp", data.Args)
 			},
 		},
 		OnStartup: func(ctx context.Context) {
 			app.Ctx = ctx
 			runtime.InitializeNotifications(ctx)
+			bridge.ListenForSecurityNotice(ctx)
 			trayStart()
 		},
 		OnBeforeClose: func(ctx context.Context) (prevent bool) {

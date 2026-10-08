@@ -18,7 +18,7 @@ func CreateTray(a *App, icon []byte) (trayStart, trayEnd func()) {
 			if Env.OS == "darwin" {
 				menu.ShowMenu()
 			} else {
-				a.ShowMainWindow()
+				a.RevealFromTray()
 			}
 		})
 
@@ -28,7 +28,7 @@ func CreateTray(a *App, icon []byte) (trayStart, trayEnd func()) {
 		}
 
 		// Ensure the tray is still available if rolling-release fails
-		addClickMenuItem("Show", "Show", func() { a.ShowMainWindow() })
+		addClickMenuItem("Show", "Show", func() { a.RevealFromTray() })
 		addClickMenuItem("Restart", "Restart", func() { a.RestartApp() })
 		addClickMenuItem("Exit", "Exit", func() { a.ExitApp() })
 	}, nil)
