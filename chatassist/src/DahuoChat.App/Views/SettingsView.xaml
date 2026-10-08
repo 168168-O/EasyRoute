@@ -1,0 +1,172 @@
+<UserControl x:Class="DahuoChat.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             UseLayoutRounding="True" SnapsToDevicePixels="True">
+  <Grid Margin="16">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="460"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+    <Border CornerRadius="18" BorderBrush="#42E9D3A0" BorderThickness="1" Padding="18" Margin="0,0,10,0">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+          <GradientStop Color="#DB1A2232" Offset="0"/>
+          <GradientStop Color="#EB0D121C" Offset="1"/>
+        </LinearGradientBrush>
+      </Border.Background>
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+          <TextBlock Text="常用设置" FontSize="18" FontWeight="Bold" Foreground="{StaticResource Gold}"/>
+          <TextBlock Text="改完自动保存，不用点确定" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,2,0,8"/>
+          <DockPanel Margin="0,6">
+            <CheckBox DockPanel.Dock="Right" IsChecked="{Binding Settings.AutoSuggest}" Checked="Save_Changed" Unchecked="Save_Changed" Content=""/>
+            <StackPanel>
+              <TextBlock Text="新消息自动出建议" Foreground="{StaticResource Ink}" FontSize="14"/>
+              <TextBlock Text="对方一发消息，右边就出建议" Foreground="{StaticResource Ink3}" FontSize="11"/>
+            </StackPanel>
+          </DockPanel>
+          <DockPanel Margin="0,6">
+            <ComboBox DockPanel.Dock="Right" Width="110" SelectedIndex="0" SelectionChanged="Tone_Changed">
+              <ComboBoxItem Content="温暖"/>
+              <ComboBoxItem Content="谦和"/>
+              <ComboBoxItem Content="幽默"/>
+              <ComboBoxItem Content="正式"/>
+            </ComboBox>
+            <TextBlock Text="默认语气" Foreground="{StaticResource Ink}" FontSize="14" VerticalAlignment="Center"/>
+          </DockPanel>
+          <DockPanel Margin="0,6">
+            <CheckBox DockPanel.Dock="Right" IsChecked="{Binding Settings.RememberTone}" Checked="Save_Changed" Unchecked="Save_Changed"/>
+            <StackPanel>
+              <TextBlock Text="每个人单独记住语气" Foreground="{StaticResource Ink}" FontSize="14"/>
+              <TextBlock Text="跟谁用过什么语气，下次自动选上" Foreground="{StaticResource Ink3}" FontSize="11"/>
+            </StackPanel>
+          </DockPanel>
+          <DockPanel Margin="0,6">
+            <ComboBox x:Name="CountBox" DockPanel.Dock="Right" Width="90" SelectionChanged="Count_Changed">
+              <ComboBoxItem Content="3"/>
+              <ComboBoxItem Content="4"/>
+              <ComboBoxItem Content="5"/>
+            </ComboBox>
+            <TextBlock Text="默认显示几条" Foreground="{StaticResource Ink}" FontSize="14" VerticalAlignment="Center"/>
+          </DockPanel>
+          <DockPanel Margin="0,6">
+            <TextBlock DockPanel.Dock="Right" Text="10 分钟" Foreground="{StaticResource Ice}" VerticalAlignment="Center"/>
+            <StackPanel>
+              <TextBlock Text="不用的抖音号自动休眠" Foreground="{StaticResource Ink}" FontSize="14"/>
+              <TextBlock Text="同时最多醒着 2 个，每 3 分钟看一眼未读" Foreground="{StaticResource Ink3}" FontSize="11"/>
+            </StackPanel>
+          </DockPanel>
+          <DockPanel Margin="0,6">
+            <TextBlock DockPanel.Dock="Right" Text="各自固定" Foreground="{StaticResource Ice}" VerticalAlignment="Center"/>
+            <StackPanel>
+              <TextBlock Text="每个抖音号独立环境" Foreground="{StaticResource Ink}" FontSize="14"/>
+              <TextBlock Text="单独文件夹 · 单独浏览器身份 · 国内直连" Foreground="{StaticResource Ink3}" FontSize="11"/>
+            </StackPanel>
+          </DockPanel>
+          <DockPanel Margin="0,6">
+            <TextBox x:Name="HotkeyBox" DockPanel.Dock="Right" Width="140" Text="{Binding Settings.Hotkey, UpdateSourceTrigger=PropertyChanged}" LostFocus="Save_Changed"/>
+            <StackPanel>
+              <TextBlock Text="手动出建议快捷键" Foreground="{StaticResource Ink}" FontSize="14"/>
+              <TextBlock Text="填入用 Alt+1 到 Alt+5。冲突时会提示你换一个" Foreground="{StaticResource Ink3}" FontSize="11"/>
+            </StackPanel>
+          </DockPanel>
+          <TextBlock Text="AI 服务" Foreground="{StaticResource Gold}" FontWeight="SemiBold" Margin="0,12,0,6"/>
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+            <Button Content="DeepSeek" Tag="DeepSeek" Click="Preset_Click" Style="{StaticResource GhostBtn}" Margin="0,0,6,0"/>
+            <Button Content="智谱" Tag="智谱 GLM-4-Flash" Click="Preset_Click" Style="{StaticResource GhostBtn}" Margin="0,0,6,0"/>
+            <Button Content="通义" Tag="通义" Click="Preset_Click" Style="{StaticResource GhostBtn}" Margin="0,0,6,0"/>
+            <Button Content="Kimi" Tag="Kimi" Click="Preset_Click" Style="{StaticResource GhostBtn}"/>
+          </StackPanel>
+          <TextBlock Text="接口地址" Foreground="{StaticResource Ink3}" FontSize="11"/>
+          <TextBox x:Name="BaseUrlBox" Text="{Binding Settings.BaseUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" LostFocus="Save_Changed"/>
+          <TextBlock Text="模型" Foreground="{StaticResource Ink3}" FontSize="11"/>
+          <TextBox x:Name="ModelBox" Text="{Binding Settings.Model, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" LostFocus="Save_Changed"/>
+          <TextBlock Text="API Key（只存在这台电脑，加密保存）" Foreground="{StaticResource Ink3}" FontSize="11"/>
+          <DockPanel Margin="0,2,0,6">
+            <Button DockPanel.Dock="Right" Content="测试" Style="{StaticResource GoldBtn}" Margin="8,0,0,0" Click="Test_Click" Width="72"/>
+            <PasswordBox x:Name="KeyBox" Height="32"/>
+          </DockPanel>
+          <TextBlock Text="{Binding AiState}" Foreground="#FF8EEAB5" FontSize="12" Margin="0,0,0,8"/>
+          <DockPanel Margin="0,4">
+            <ComboBox x:Name="EmbedBox" DockPanel.Dock="Right" Width="140" SelectedIndex="0" SelectionChanged="Embed_Changed">
+              <ComboBoxItem Content="放进来"/>
+              <ComboBoxItem Content="贴在旁边"/>
+            </ComboBox>
+            <StackPanel>
+              <TextBlock Text="微信怎么放" Foreground="{StaticResource Ink}" FontSize="14"/>
+              <TextBlock Text="放进来不顺手时，可以贴在旁边" Foreground="{StaticResource Ink3}" FontSize="11"/>
+            </StackPanel>
+          </DockPanel>
+          <DockPanel Margin="0,8">
+            <ComboBox x:Name="FillBox" DockPanel.Dock="Right" Width="140" SelectedIndex="0" SelectionChanged="Fill_Changed">
+              <ComboBoxItem Content="填入输入框"/>
+              <ComboBoxItem Content="只复制"/>
+            </ComboBox>
+            <TextBlock Text="点了建议之后" Foreground="{StaticResource Ink}" FontSize="14" VerticalAlignment="Center"/>
+          </DockPanel>
+          <TextBlock Text="人设" Foreground="{StaticResource Ink3}" FontSize="11" Margin="0,8,0,2"/>
+          <TextBox Text="{Binding Settings.Persona, UpdateSourceTrigger=PropertyChanged}" MinHeight="52" TextWrapping="Wrap" AcceptsReturn="True" LostFocus="Save_Changed"/>
+          <Border Margin="0,12,0,0" CornerRadius="12" BorderBrush="#4D7FE3A6" BorderThickness="1" Background="#1C3CBE78" Padding="12">
+            <StackPanel>
+              <TextBlock Text="{Binding Promise}" TextWrapping="Wrap" Foreground="{StaticResource Ink}" FontSize="13"/>
+              <TextBlock Text="没有群发 · 没有自动回复 · 没有一键发送" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,4,0,0"/>
+            </StackPanel>
+          </Border>
+          <Button Content="返回聊天" Style="{StaticResource GhostBtn}" HorizontalAlignment="Left" Margin="0,12,0,0" Click="Back_Click"/>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+    <Border Grid.Column="1" CornerRadius="18" BorderBrush="#42E9D3A0" BorderThickness="1" Padding="18" Margin="8,0,0,0">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+          <GradientStop Color="#DB1A2232" Offset="0"/>
+          <GradientStop Color="#EB0D121C" Offset="1"/>
+        </LinearGradientBrush>
+      </Border.Background>
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top">
+          <TextBlock Text="我的话术" FontSize="18" FontWeight="Bold" Foreground="{StaticResource Gold}"/>
+          <TextBlock Text="写几个要点就行，AI 会自己说成好听的话" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,2,0,8"/>
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="问候" Tag="问候" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
+            <Button Content="安慰" Tag="安慰" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
+            <Button Content="拒绝" Tag="拒绝" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
+            <Button Content="道歉" Tag="道歉" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
+            <Button Content="感谢" Tag="感谢" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
+            <Button Content="夸赞" Tag="夸赞" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
+            <Button Content="谈生意" Tag="谈生意" Click="Cat_Click" Style="{StaticResource GhostBtn}"/>
+          </StackPanel>
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+          <TextBox x:Name="NewTitle" Margin="0,0,0,4" ToolTip="标题"/>
+          <TextBox x:Name="NewPoints" Margin="0,0,0,4" ToolTip="要点，一行一个" MinHeight="36" AcceptsReturn="True"/>
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Content="导入 CSV" Style="{StaticResource GhostBtn}" Margin="6,0,0,0" Click="Import_Click"/>
+            <Button DockPanel.Dock="Right" Content="导出 CSV" Style="{StaticResource GhostBtn}" Margin="6,0,0,0" Click="Export_Click"/>
+            <Button Content="＋ 加一条" Style="{StaticResource GoldBtn}" Height="40" Click="Add_Click"/>
+          </DockPanel>
+          <TextBlock Text="在右边面板点「话术」，就能把要点带进回复里" Foreground="{StaticResource Ink3}" FontSize="11" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding VisibleScripts}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border CornerRadius="12" BorderBrush="#14FFFFFF" BorderThickness="1" Background="#0EFFFFFF" Padding="12" Margin="0,0,0,8">
+                  <StackPanel>
+                    <TextBlock FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource Ink}">
+                      <Run Text="{Binding Number, Mode=OneWay}"/>
+                      <Run Text="  "/>
+                      <Run Text="{Binding Title, Mode=OneWay}"/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding Points}" Foreground="{StaticResource Ink2}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock Text="{Binding Use}" Foreground="{StaticResource Ink3}" FontSize="11" Margin="0,4,0,0"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+  </Grid>
+</UserControl>

@@ -1,0 +1,190 @@
+<UserControl x:Class="DahuoChat.WeChatDemoView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             UseLayoutRounding="True" SnapsToDevicePixels="True">
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="56"/>
+      <ColumnDefinition Width="250"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
+    <Border Background="#FF2B2B2B">
+      <StackPanel Margin="0,28,0,0">
+        <Border Width="34" Height="34" CornerRadius="6" HorizontalAlignment="Center" Margin="0,0,0,18">
+          <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+              <GradientStop Color="#FFD9B46F" Offset="0"/>
+              <GradientStop Color="#FF8B6431" Offset="1"/>
+            </LinearGradientBrush>
+          </Border.Background>
+          <TextBlock Text="我" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
+        </Border>
+        <Border Width="22" Height="22" CornerRadius="5" BorderBrush="#FF07C160" BorderThickness="2" HorizontalAlignment="Center" Margin="0,0,0,16" Background="#2607C160"/>
+        <Border Width="22" Height="22" CornerRadius="5" BorderBrush="#FF8C8C8C" BorderThickness="2" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+        <Border Width="22" Height="22" CornerRadius="4" BorderBrush="#FF8C8C8C" BorderThickness="2" HorizontalAlignment="Center"/>
+      </StackPanel>
+    </Border>
+    <Border Grid.Column="1" Background="#FFECECEC" BorderBrush="#FFDCDCDC" BorderThickness="0,0,1,0">
+      <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Height="62" Margin="12,0">
+          <Border DockPanel.Dock="Right" Width="26" Height="26" CornerRadius="5" Background="#FFE2E2E2" Margin="8,0,0,0">
+            <TextBlock Text="+" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF777777" FontSize="16"/>
+          </Border>
+          <Border Height="26" CornerRadius="5" Background="#FFE2E2E2" VerticalAlignment="Center">
+            <TextBlock Text="搜索" Foreground="#FF999999" FontSize="12" Margin="26,0,0,0" VerticalAlignment="Center"/>
+          </Border>
+        </DockPanel>
+        <StackPanel>
+          <Border Background="#FFC9C9C9" Padding="12,11">
+            <DockPanel>
+              <Border Width="40" Height="40" CornerRadius="5" Background="#FF3D6FA8" Margin="0,0,10,0">
+                <TextBlock Text="杰" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="SemiBold"/>
+              </Border>
+              <StackPanel>
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Right" Text="20:31" Foreground="#FFAAAAAA" FontSize="11"/>
+                  <TextBlock Text="阿杰" FontSize="14"/>
+                </DockPanel>
+                <TextBlock Text="你可一定要来啊，就等你了" Foreground="#FF999999" FontSize="12" Margin="0,3,0,0"/>
+              </StackPanel>
+            </DockPanel>
+          </Border>
+          <Border Padding="12,11">
+            <DockPanel>
+              <Border Width="40" Height="40" CornerRadius="5" Background="#FFB56D6D" Margin="0,0,10,0">
+                <TextBlock Text="妈" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <StackPanel>
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Right" Text="19:05" Foreground="#FFAAAAAA" FontSize="11"/>
+                  <TextBlock Text="妈" FontSize="14"/>
+                </DockPanel>
+                <TextBlock Text="周末回来吃饭吗" Foreground="#FF999999" FontSize="12" Margin="0,3,0,0"/>
+              </StackPanel>
+            </DockPanel>
+          </Border>
+          <Border Padding="12,11">
+            <DockPanel>
+              <Border Width="40" Height="40" CornerRadius="5" Background="#FF59A58A" Margin="0,0,10,0">
+                <TextBlock Text="家" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <StackPanel>
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Right" Text="18:47" Foreground="#FFAAAAAA" FontSize="11"/>
+                  <TextBlock Text="相亲相爱一家人" FontSize="14"/>
+                </DockPanel>
+                <TextBlock Text="二姨：[图片]" Foreground="#FF999999" FontSize="12" Margin="0,3,0,0"/>
+              </StackPanel>
+            </DockPanel>
+          </Border>
+          <Border Padding="12,11">
+            <DockPanel>
+              <Border Width="40" Height="40" CornerRadius="5" Background="#FFC79A52" Margin="0,0,10,0">
+                <TextBlock Text="王" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <StackPanel>
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Right" Text="17:20" Foreground="#FFAAAAAA" FontSize="11"/>
+                  <TextBlock Text="老王" FontSize="14"/>
+                </DockPanel>
+                <TextBlock Text="周六见啊兄弟" Foreground="#FF999999" FontSize="12" Margin="0,3,0,0"/>
+              </StackPanel>
+            </DockPanel>
+          </Border>
+          <Border Padding="12,11">
+            <DockPanel>
+              <Border Width="40" Height="40" CornerRadius="5" Background="#FF6A8FC7" Margin="0,0,10,0">
+                <TextBlock Text="李" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <StackPanel>
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Right" Text="16:02" Foreground="#FFAAAAAA" FontSize="11"/>
+                  <TextBlock Text="李经理" FontSize="14"/>
+                </DockPanel>
+                <TextBlock Text="方案明天上午发我一下" Foreground="#FF999999" FontSize="12" Margin="0,3,0,0"/>
+              </StackPanel>
+            </DockPanel>
+          </Border>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+    <Grid Grid.Column="2" Background="#FFF5F5F5">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="62"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="150"/>
+      </Grid.RowDefinitions>
+      <Border BorderBrush="#FFE3E3E3" BorderThickness="0,0,0,1" Padding="22,0">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Right" Text="···" Foreground="#FF888888" FontSize="18" VerticalAlignment="Center"/>
+          <TextBlock Text="阿杰" FontSize="16" VerticalAlignment="Center"/>
+        </DockPanel>
+      </Border>
+      <Grid Grid.Row="1" Margin="22,16">
+        <StackPanel>
+          <TextBlock Text="20:26" Foreground="#FFB0B0B0" FontSize="11" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+          <DockPanel Margin="0,0,80,12">
+            <Border Width="36" Height="36" CornerRadius="5" Background="#FF3D6FA8" Margin="0,0,10,0">
+              <TextBlock Text="杰" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <Border Background="White" CornerRadius="5" Padding="12,9" HorizontalAlignment="Left">
+              <TextBlock Text="兄弟！我新房终于装好了" FontSize="14"/>
+            </Border>
+          </DockPanel>
+          <DockPanel Margin="80,0,0,12" LastChildFill="False" HorizontalAlignment="Right">
+            <Border Width="36" Height="36" CornerRadius="5" Background="#FF8B6431" Margin="10,0,0,0" DockPanel.Dock="Right">
+              <TextBlock Text="我" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <Border Background="#FF95EC69" CornerRadius="5" Padding="12,9">
+              <TextBlock Text="恭喜恭喜！折腾大半年终于能住了" FontSize="14"/>
+            </Border>
+          </DockPanel>
+          <Border BorderBrush="#F26FB8F0" BorderThickness="2" CornerRadius="8" Padding="8" Margin="0,4,40,0" HorizontalAlignment="Left">
+            <Border.Effect>
+              <DropShadowEffect Color="#FF6FB8F0" BlurRadius="8" ShadowDepth="0" Opacity="0.35"/>
+            </Border.Effect>
+            <StackPanel>
+              <TextBlock Text="已读取" Foreground="White" FontSize="11" HorizontalAlignment="Right" Margin="0,-18,-6,4">
+                <TextBlock.Background>
+                  <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#FF4F9EE0" Offset="0"/>
+                    <GradientStop Color="#FF6FB8F0" Offset="1"/>
+                  </LinearGradientBrush>
+                </TextBlock.Background>
+              </TextBlock>
+              <DockPanel Margin="0,0,0,8">
+                <Border Width="36" Height="36" CornerRadius="5" Background="#FF3D6FA8" Margin="0,0,10,0">
+                  <TextBlock Text="杰" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <Border Background="White" CornerRadius="5" Padding="12,9" HorizontalAlignment="Left">
+                  <TextBlock Text="周六中午来暖房呗，我亲自下厨，叫了老王他们" FontSize="14"/>
+                </Border>
+              </DockPanel>
+              <DockPanel>
+                <Border Width="36" Height="36" CornerRadius="5" Background="#FF3D6FA8" Margin="0,0,10,0">
+                  <TextBlock Text="杰" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <Border Background="White" CornerRadius="5" Padding="12,9" HorizontalAlignment="Left">
+                  <TextBlock Text="你可一定要来啊，就等你了" FontSize="14"/>
+                </Border>
+              </DockPanel>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Grid>
+      <Border Grid.Row="2" BorderBrush="#FFE3E3E3" BorderThickness="0,1,0,0" Padding="22,10">
+        <Grid>
+          <StackPanel Orientation="Horizontal">
+            <Border Width="20" Height="20" CornerRadius="10" BorderBrush="#FF777777" BorderThickness="2" Margin="0,0,14,0"/>
+            <Border Width="20" Height="20" CornerRadius="4" BorderBrush="#FF777777" BorderThickness="2" Margin="0,0,14,0"/>
+            <Border Width="20" Height="20" CornerRadius="3" BorderBrush="#FF777777" BorderThickness="2"/>
+          </StackPanel>
+          <Border Width="2" Height="18" Background="#FF07C160" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,36,0,0"/>
+          <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="#FFE9E9E9" BorderBrush="#FFDDDDDD" BorderThickness="1" CornerRadius="4" Padding="18,6">
+            <TextBlock Text="发送(S)" Foreground="#FF07C160" FontSize="13"/>
+          </Border>
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

@@ -1,0 +1,113 @@
+<UserControl x:Class="DahuoChat.WizardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             UseLayoutRounding="True" SnapsToDevicePixels="True">
+  <Border Margin="16" CornerRadius="18" BorderBrush="#4DE9D3A0" BorderThickness="1" Padding="24">
+    <Border.Background>
+      <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#DB1A2232" Offset="0"/>
+        <GradientStop Color="#EB0D121C" Offset="1"/>
+      </LinearGradientBrush>
+    </Border.Background>
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+      <DockPanel>
+        <Border Width="38" Height="38" CornerRadius="10" Background="{StaticResource GoldFill}" Margin="0,0,12,0">
+          <TextBlock Text="达" FontSize="18" FontWeight="Bold" Foreground="#FF2A1F0C" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <TextBlock DockPanel.Dock="Right" Text="第 2 步 / 共 3 步" Foreground="{StaticResource Ink3}" VerticalAlignment="Center" FontSize="13"/>
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="添加一个账号" FontSize="21" FontWeight="Bold" Foreground="{StaticResource Gold}"/>
+          <TextBlock Text="三步就好，大概 30 秒。只支持电脑微信和国内抖音。" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,3,0,0"/>
+        </StackPanel>
+      </DockPanel>
+      <Border Grid.Row="1" Margin="0,16,0,0" Padding="16,10" CornerRadius="12" Background="#38000000" BorderBrush="#10FFFFFF" BorderThickness="1">
+        <DockPanel>
+          <TextBlock Text="① 选平台" Foreground="{StaticResource Ink2}" VerticalAlignment="Center"/>
+          <TextBlock Text=" — " Foreground="{StaticResource Ink3}"/>
+          <TextBlock Text="② 扫码登录" Foreground="{StaticResource Gold}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <TextBlock Text=" — " Foreground="{StaticResource Ink3}"/>
+          <TextBlock Text="③ 起个名字" Foreground="{StaticResource Ink3}" VerticalAlignment="Center"/>
+        </DockPanel>
+      </Border>
+      <Grid Grid.Row="2" Margin="0,16,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="280"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="280"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <TextBlock Text="① 选平台" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,0,0,8"/>
+          <Button Click="PickWechat_Click" HorizontalContentAlignment="Left" Margin="0,0,0,8" Padding="12" Style="{StaticResource GhostBtn}">
+            <StackPanel>
+              <TextBlock Text="微信" FontSize="17" Foreground="{StaticResource Ink}"/>
+              <TextBlock Text="把电脑上已登录的微信放进来（不改动微信）" Foreground="{StaticResource Ink3}" FontSize="12" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Button>
+          <Button Click="PickDouyin_Click" HorizontalContentAlignment="Left" Margin="0,0,0,12" Padding="12" Style="{StaticResource GhostBtn}">
+            <StackPanel>
+              <TextBlock Text="抖音" FontSize="17" Foreground="{StaticResource Ink}"/>
+              <TextBlock Text="扫码登录，可加好几个号。douyin.com 国内版" Foreground="{StaticResource Ink3}" FontSize="12" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Button>
+          <TextBlock Text="浏览器身份（选好后固定不变）" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,0,0,8"/>
+          <UniformGrid Columns="3">
+            <Button Content="自动" Tag="Auto" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
+            <Button Content="Edge" Tag="Edge" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
+            <Button Content="Chrome" Tag="Chrome" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
+            <Button Content="360" Tag="360" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
+            <Button Content="QQ 高级" Tag="QQ" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
+            <Button Content="搜狗 高级" Tag="Sogou" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
+          </UniformGrid>
+          <TextBlock Text="{Binding WizardNote}" Foreground="{StaticResource Ink3}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
+          <TextBlock Text="{Binding WizardWarn}" Foreground="#FFE7C07A" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+          <TextBlock Text="② 用手机扫一扫" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,0,0,10"/>
+          <Border Width="220" Height="220" CornerRadius="16" Background="White" BorderBrush="#CCE9D3A0" BorderThickness="1">
+            <Grid>
+              <TextBlock Text="抖" FontSize="42" FontWeight="Bold" Foreground="#FF111111" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              <TextBlock Text="真机上这里是抖音自己的二维码" Foreground="#FF666666" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="12" TextWrapping="Wrap" TextAlignment="Center"/>
+            </Grid>
+          </Border>
+          <TextBlock Margin="0,14,0,0" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource Ink}" Text="打开手机抖音，点扫一扫对准这里"/>
+          <TextBlock Margin="0,6,0,0" Foreground="{StaticResource Ink3}" FontSize="12" Text="二维码由抖音页面自己显示，我们不替你登录。"/>
+        </StackPanel>
+        <StackPanel Grid.Column="2">
+          <TextBlock Text="③ 给这个号起个名字" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,0,0,8"/>
+          <TextBox Text="{Binding WizardName, UpdateSourceTrigger=PropertyChanged}" FontSize="17" Height="48" Padding="12,8"/>
+          <StackPanel Orientation="Horizontal" Margin="0,8,0,12">
+            <Button Content="主号" Tag="主号" Click="Name_Click" Style="{StaticResource GhostBtn}" Margin="0,0,6,0"/>
+            <Button Content="小号" Tag="小号" Click="Name_Click" Style="{StaticResource GhostBtn}" Margin="0,0,6,0"/>
+            <Button Content="店铺号" Tag="店铺号" Click="Name_Click" Style="{StaticResource GhostBtn}"/>
+          </StackPanel>
+          <Border CornerRadius="12" BorderBrush="#4DA9DCFF" BorderThickness="1" Padding="12" Background="#146FB8F0">
+            <StackPanel>
+              <TextBlock Text="独立环境" Foreground="{StaticResource Ice}" FontWeight="SemiBold" FontSize="14"/>
+              <TextBlock Text="像单独一个浏览器" Foreground="{StaticResource Ink3}" FontSize="11" Margin="0,2,0,6"/>
+              <TextBlock Text="数据    单独文件夹 · 登录不共享" Foreground="{StaticResource Ink}" FontSize="12" Margin="0,3"/>
+              <TextBlock Text="浏览器    选好后固定不变" Foreground="{StaticResource Ink}" FontSize="12" Margin="0,3"/>
+              <TextBlock Text="时区 / 语言    北京时间 · 中文" Foreground="{StaticResource Ink}" FontSize="12" Margin="0,3"/>
+              <TextBlock Text="网络线路    国内直连 · 不走 VPN" Foreground="{StaticResource Ink}" FontSize="12" Margin="0,3"/>
+            </StackPanel>
+          </Border>
+          <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Foreground="{StaticResource Ink3}" FontSize="12"
+                     Text="登录信息只存在这台电脑；不会自动发任何消息。"/>
+        </StackPanel>
+      </Grid>
+      <DockPanel Grid.Row="3" Margin="0,12,0,0">
+        <Button DockPanel.Dock="Right" Content="完成" Style="{StaticResource GoldBtn}" Width="180" Height="48" FontSize="17" Click="Finish_Click" Margin="10,0,0,0"/>
+        <Button DockPanel.Dock="Right" Content="上一步" Style="{StaticResource GhostBtn}" Width="140" Height="48" FontSize="16" Click="Back_Click"/>
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="{Binding Promise}" Foreground="{StaticResource Gold}" FontSize="12" TextWrapping="Wrap"/>
+          <TextBlock Text="扫不出来？把手机亮度调高，或在抖音页面里刷新二维码。" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+      </DockPanel>
+    </Grid>
+  </Border>
+</UserControl>

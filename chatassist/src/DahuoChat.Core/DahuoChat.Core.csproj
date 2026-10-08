@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>DahuoChat</RootNamespace>
+    <AssemblyName>DahuoChat.Core</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\prompt\system_prompt.txt" Link="prompt\system_prompt.txt" />
+    <EmbeddedResource Include="..\..\prompt\user_template.txt" Link="prompt\user_template.txt" />
+  </ItemGroup>
+</Project>

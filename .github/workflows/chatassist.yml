@@ -1,0 +1,143 @@
+name: 达货聊天
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "chatassist/**"
+      - ".github/workflows/chatassist.yml"
+  pull_request:
+    paths:
+      - "chatassist/**"
+      - ".github/workflows/chatassist.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: 禁止代发和境外平台
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $needles = @(
+            ("VK_" + "RETURN"),
+            ("Send" + "Keys"),
+            ("keybd_" + "event"),
+            ("{EN" + "TER}"),
+            ("Keys." + "Enter"),
+            ("Keys." + "Return"),
+            ("tik" + "tok"),
+            ("tele" + "gram"),
+            ("what" + "sapp"),
+            ("face" + "book"),
+            ("insta" + "gram")
+          )
+          $click = ".cl" + "ick("
+          $root = "chatassist"
+          $files = Get-ChildItem $root -Recurse -File | Where-Object {
+            $_.FullName -notmatch "\\(bin|obj|publish|shots)\\" -and
+            $_.Extension -match "\.(cs|js|xaml|json|md|py|yml)$"
+          }
+          $hits = @()
+          foreach ($file in $files) {
+            $text = Get-Content -Raw -LiteralPath $file.FullName
+            foreach ($needle in $needles) {
+              if ($text -and $text.IndexOf($needle, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+                $hits += "$($file.FullName) :: $needle"
+              }
+            }
+            if ($file.Extension -eq ".js" -and $text -and $text.IndexOf($click, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+              $hits += "$($file.FullName) :: click"
+            }
+          }
+          if ($hits.Count -gt 0) {
+            $hits | Write-Host
+            throw "安全检查没通过"
+          }
+
+      - name: 测试
+        run: dotnet test chatassist/DahuoChat.sln -c Release --nologo
+
+      - name: 打包
+        run: dotnet publish chatassist/src/DahuoChat.App/DahuoChat.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o chatassist/publish
+
+      - name: 中文字体
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $dir = Join-Path $env:RUNNER_TEMP "cjkfont"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $otf = Join-Path $dir "SourceHanSansCN-Regular.otf"
+          $urls = @(
+            "https://github.com/adobe-fonts/source-han-sans/raw/release/SubsetOTF/CN/SourceHanSansCN-Regular.otf",
+            "https://raw.githubusercontent.com/adobe-fonts/source-han-sans/release/SubsetOTF/CN/SourceHanSansCN-Regular.otf"
+          )
+          $ok = $false
+          foreach ($url in $urls) {
+            try {
+              Invoke-WebRequest -Uri $url -OutFile $otf -UseBasicParsing
+              if ((Get-Item $otf).Length -gt 100000) { $ok = $true; break }
+            } catch {
+              Write-Host $_
+            }
+          }
+          if (-not $ok) { throw "中文字体没下载到" }
+          Add-Type -AssemblyName System.Drawing
+          $bag = New-Object System.Drawing.Text.PrivateFontCollection
+          $bag.AddFontFile($otf)
+          $family = $bag.Families[0].Name
+          Write-Host "font family: $family"
+          "DAHUO_FONT=$otf" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "DAHUO_FONT_FAMILY=$family" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: 界面截图
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $out = "chatassist/shots"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          $exe = "chatassist/publish/dahuo-chat.exe"
+          if (-not (Test-Path $exe)) { throw "没有 dahuo-chat.exe" }
+          $p = Start-Process -FilePath (Resolve-Path $exe) -ArgumentList @("--shots", (Resolve-Path $out).Path) -PassThru -WindowStyle Normal
+          if (-not $p.WaitForExit(180000)) {
+            try { $p.Kill() } catch {}
+            throw "截图超时"
+          }
+          if ($p.ExitCode -ne 0) {
+            $err = Join-Path $out "error.txt"
+            if (Test-Path $err) { Get-Content $err }
+            throw "截图失败，退出码 $($p.ExitCode)"
+          }
+          $pngs = Get-ChildItem $out -Filter *.png
+          if ($pngs.Count -lt 5) { throw "截图不足 5 张" }
+          $pngs | ForEach-Object { Write-Host "$($_.Name) $($_.Length)" }
+
+      - name: 压缩便携包
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          if (Test-Path dahuo-chat-win-x64.zip) { Remove-Item dahuo-chat-win-x64.zip }
+          Compress-Archive -Path chatassist/publish/* -DestinationPath dahuo-chat-win-x64.zip
+          if (-not (Test-Path dahuo-chat-win-x64.zip)) { throw "zip missing" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dahuo-chat-windows
+          path: dahuo-chat-win-x64.zip
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dahuo-chat-screenshots
+          path: chatassist/shots/*.png
+          if-no-files-found: error
