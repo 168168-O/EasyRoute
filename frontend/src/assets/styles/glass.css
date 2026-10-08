@@ -221,6 +221,37 @@ body {
   box-shadow: 0 0 16px rgba(var(--accent-2-rgb), 0.75), inset 0 0 0 1px rgba(var(--accent-2-rgb), 0.95) !important;
 }
 
+#app .main-nav__button { position: relative; }
+#app .nav-alert {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e25b5b;
+  pointer-events: none;
+  flex: none;
+}
+#app .main-nav__button .nav-alert {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+#app .nav-alert--header {
+  display: inline-block;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+@keyframes dhagn-alert-blink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 rgba(226, 91, 91, 0); }
+  50% { opacity: 0.4; box-shadow: 0 0 8px rgba(226, 91, 91, 0.95); }
+}
+#app .nav-alert,
+.network-check .nc-alert {
+  animation: dhagn-alert-blink 1.2s ease-in-out infinite;
+}
+html.window-hidden #app .nav-alert,
+html.window-hidden .network-check .nc-alert {
+  animation-play-state: paused;
+}
 #app .nav-ico {
   display: inline-flex;
   width: 16px;
@@ -699,6 +730,11 @@ body:not([theme-mode='light']) #app .font-bold {
 .nc-dot.red { background: #e25b5b; }
 .network-check .nc-security { margin-top: 8px; }
 .network-check .nc-security .nc-name { min-width: 64px; }
+.network-check .nc-security .nc-row.is-red { cursor: pointer; border-radius: 8px; }
+.network-check .nc-security .nc-row.is-red .nc-name,
+.network-check .nc-security .nc-row.is-red .nc-value { color: #ffd0d0; }
+body[theme-mode='light'] .network-check .nc-security .nc-row.is-red .nc-name,
+body[theme-mode='light'] .network-check .nc-security .nc-row.is-red .nc-value { color: #9d1c1c; }
 .network-check .nc-security .nc-value {
   margin-left: 0;
   flex: 1;

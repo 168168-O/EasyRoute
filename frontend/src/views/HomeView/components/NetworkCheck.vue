@@ -6,6 +6,12 @@ import { getConnections, getProxies } from '@/api/kernel'
 import { BrowserOpenURL, HttpGet, LookupHost, SecurityCheck, type SecurityReport } from '@/bridge'
 import { useAppSettingsStore, useKernelApiStore } from '@/stores'
 import { explainDomainRoute, normalizePinnedRoutes, type RouteExplanation } from '@/utils/appRouting'
+import {
+  acknowledgeSecurityItem,
+  publishSecurityItems,
+  securityAlerting,
+  securityItemAlerting,
+} from '@/utils/securityAlertState'
 import { message } from '@/utils'
 import {
   CHECK_TIMEOUT_SEC,
@@ -146,6 +152,7 @@ const runSecurity = async () => {
     const port = Number(kernel.config['mixed-port'] || 0)
     const tun = kernel.config.tun?.device || 'tun0'
     security.value = await SecurityCheck(port, tun)
+    publishSecurityItems(security.value.items || [])
   } catch (error) {
     message.error(error)
   } finally {
@@ -179,6 +186,9 @@ const coreText = computed(() => {
 
 <template>
   <Card title="home.networkCheck.title" class="network-check">
+    <template #title-suffix>
+      <i v-if="securityAlerting" class="nav-alert nav-alert--header" />
+    </template>
     <template #extra>
       <Button type="primary" size="small" :loading="running" @click="start">
         {{ running ? t('home.networkCheck.running') : t('home.networkCheck.start') }}
@@ -200,7 +210,13 @@ const coreText = computed(() => {
     </div>
     <p v-if="!security" class="nc-idle">{{ t('home.networkCheck.securityIdle') }}</p>
     <div v-else class="nc-list nc-security">
-      <div v-for="item in security.items" :key="item.id" class="nc-row">
+      <div
+        v-for="item in security.items"
+        :key="item.id"
+        class="nc-row"
+        :class="{ 'is-red': item.level === 'red', 'nc-alert': securityItemAlerting(item) }"
+        @click="acknowledgeSecurityItem(item)"
+      >
         <i class="nc-dot" :class="item.level" />
         <span class="nc-name">{{ item.name }}</span>
         <span class="nc-value">{{ item.text }}</span>
