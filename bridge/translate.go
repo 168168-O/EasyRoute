@@ -8,6 +8,7 @@ import (
 	"html"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"regexp"
@@ -22,16 +23,17 @@ const (
 	defaultGoogleURL   = "https://clients5.google.com/translate_a/single"
 	defaultMyMemoryURL = "https://api.mymemory.translated.net/get"
 	translateUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
-	// Google through the core, then MyMemory, then a short last fallback. 4s + the
-	// remaining slice of an 8s budget stays under the worst case that direct Google used to burn.
-	translateBudget    = 8 * time.Second
+	// Google through the core (4s) and Bing direct (6s) run together.
+	// MyMemory (4s) runs only after both fail. An AI key gets 15s in parallel.
 	googleProxyTimeout = 4 * time.Second
-	myMemoryTimeout    = 5 * time.Second
-	minFallbackTimeout = 1500 * time.Millisecond
+	bingTimeout        = 6 * time.Second
+	myMemoryTimeout    = 4 * time.Second
+	aiTimeout          = 15 * time.Second
 )
 
 var (
-	bingKeyPattern = regexp.MustCompile(`params_AbusePreventionHelper\s*=\s*\[(\d+),"([^"]+)"`)
+	// The third number is a TTL in milliseconds. The first number is the issue time, not the expiry.
+	bingKeyPattern = regexp.MustCompile(`params_AbusePreventionHelper\s*=\s*\[(\d+),"([^"]+)"(?:,(\d+))?`)
 	bingIGPattern  = regexp.MustCompile(`IG:"([A-F0-9]+)"`)
 	bingIIDPattern = regexp.MustCompile(`data-iid="(translator\.[^"]+)"`)
 )
@@ -56,6 +58,14 @@ type TranslateResult struct {
 	SourceLang string `json:"sourceLang"`
 	TargetLang string `json:"targetLang"`
 	Provider   string `json:"provider"`
+	Label      string `json:"label,omitempty"`
+}
+
+// TranslateBundle is the comparison the 翻译 page shows.
+// Results are ordered with the AI translation first when a key is set.
+type TranslateBundle struct {
+	Results []TranslateResult `json:"results"`
+	Note    string            `json:"note,omitempty"`
 }
 
 // isMostlyChinese reports whether the message should be treated as Chinese.
@@ -215,6 +225,7 @@ type translateEngine struct {
 	googleURL   string
 	myMemoryURL string
 	creds       bingCreds
+	credsClient *http.Client
 }
 
 func newTranslateEngine(direct, proxy *http.Client) *translateEngine {
@@ -231,7 +242,12 @@ func directTranslateClient() *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	// Ignore HTTP_PROXY / the system proxy. Translation must leave the machine directly.
 	transport.Proxy = func(*http.Request) (*url.URL, error) { return nil, nil }
-	return &http.Client{Transport: transport, Timeout: 12 * time.Second}
+	return &http.Client{Transport: transport, Jar: newTranslateJar(), Timeout: 12 * time.Second}
+}
+
+func newTranslateJar() http.CookieJar {
+	jar, _ := cookiejar.New(nil)
+	return jar
 }
 
 func explicitProxyClient(proxyURL string) *http.Client {
@@ -245,7 +261,7 @@ func explicitProxyClient(proxyURL string) *http.Client {
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = http.ProxyURL(parsed)
-	return &http.Client{Transport: transport, Timeout: 12 * time.Second}
+	return &http.Client{Transport: transport, Jar: newTranslateJar(), Timeout: 12 * time.Second}
 }
 
 func proxyTranslateClient(proxyURL string) *http.Client {
@@ -262,7 +278,7 @@ func proxyTranslateClient(proxyURL string) *http.Client {
 	} else {
 		transport.Proxy = http.ProxyFromEnvironment
 	}
-	return &http.Client{Transport: transport, Timeout: 12 * time.Second}
+	return &http.Client{Transport: transport, Jar: newTranslateJar(), Timeout: 12 * time.Second}
 }
 
 func envProxyConfigured() bool {
@@ -325,9 +341,17 @@ func parseBingPage(html, pageURL string) (bingCreds, error) {
 	if err != nil || parsed.Host == "" {
 		return bingCreds{}, errTranslateBad
 	}
-	expiryMS, err := strconvParseInt(key[1])
+	issuedMS, err := strconvParseInt(key[1])
 	if err != nil {
 		return bingCreds{}, errTranslateBad
+	}
+	until := time.UnixMilli(issuedMS).Add(-30 * time.Second)
+	if key[3] != "" {
+		ttlMS, err := strconvParseInt(key[3])
+		if err != nil {
+			return bingCreds{}, errTranslateBad
+		}
+		until = time.UnixMilli(issuedMS).Add(time.Duration(ttlMS) * time.Millisecond).Add(-30 * time.Second)
 	}
 	post := parsed.Scheme + "://" + parsed.Host + "/ttranslatev3?isVertical=1&IG=" + ig[1] + "&IID=" + url.QueryEscape(iid[1])
 	return bingCreds{
@@ -336,7 +360,7 @@ func parseBingPage(html, pageURL string) (bingCreds, error) {
 		ig:      ig[1],
 		iid:     iid[1],
 		postURL: post,
-		until:   time.UnixMilli(expiryMS).Add(-30 * time.Second),
+		until:   until,
 	}, nil
 }
 
@@ -353,7 +377,7 @@ func strconvParseInt(raw string) (int64, error) {
 
 func (e *translateEngine) loadBingCreds(ctx context.Context, client *http.Client) (bingCreds, error) {
 	e.mu.Lock()
-	if e.creds.token != "" && time.Now().Before(e.creds.until) {
+	if e.creds.token != "" && time.Now().Before(e.creds.until) && e.credsClient == client {
 		creds := e.creds
 		e.mu.Unlock()
 		return creds, nil
@@ -377,6 +401,7 @@ func (e *translateEngine) loadBingCreds(ctx context.Context, client *http.Client
 		}
 		e.mu.Lock()
 		e.creds = creds
+		e.credsClient = client
 		e.mu.Unlock()
 		return creds, nil
 	}
@@ -408,12 +433,14 @@ func (e *translateEngine) bingOnce(ctx context.Context, client *http.Client, tex
 	if err != nil {
 		e.mu.Lock()
 		e.creds = bingCreds{}
+		e.credsClient = nil
 		e.mu.Unlock()
 		return TranslateResult{}, errTranslateDown
 	}
 	if status != http.StatusOK {
 		e.mu.Lock()
 		e.creds = bingCreds{}
+		e.credsClient = nil
 		e.mu.Unlock()
 		return TranslateResult{}, errTranslateBad
 	}
@@ -445,6 +472,7 @@ func (e *translateEngine) translateBing(ctx context.Context, text, from, to stri
 	}
 	e.mu.Lock()
 	e.creds = bingCreds{}
+	e.credsClient = nil
 	e.mu.Unlock()
 	return e.bingOnce(ctx, e.proxy, text, from, to)
 }
@@ -586,69 +614,106 @@ func usable(result TranslateResult, err error) bool {
 }
 
 func (e *translateEngine) Translate(text, target string) (TranslateResult, error) {
+	bundle, err := e.TranslateAll(text, target, aiSettings{})
+	if err != nil {
+		return TranslateResult{}, err
+	}
+	if len(bundle.Results) == 0 {
+		return TranslateResult{}, errTranslateBad
+	}
+	return bundle.Results[0], nil
+}
+
+// TranslateAll runs Google (core proxy only) and Bing (direct) together.
+// MyMemory runs only when both of those return nothing. An AI key, when set, is
+// requested at the same time and placed first.
+func (e *translateEngine) TranslateAll(text, target string, ai aiSettings) (TranslateBundle, error) {
 	text = strings.TrimSpace(text)
 	if text == "" {
-		return TranslateResult{}, errTranslateEmpty
+		return TranslateBundle{}, errTranslateEmpty
 	}
 	if len([]rune(text)) > 5000 {
-		return TranslateResult{}, errTranslateTooLong
+		return TranslateBundle{}, errTranslateTooLong
 	}
 	from, to := ResolveLanguages(text, target)
-	deadline := time.Now().Add(translateBudget)
-	var last error = errTranslateDown
+	aiOn := ai.enabled()
 
-	// Google only through the running core. A direct clients5 attempt is not started.
+	var googleRes, bingRes, aiRes TranslateResult
+	var googleErr, bingErr, aiErr error
+	var group sync.WaitGroup
+
+	if aiOn {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), aiTimeout)
+			defer cancel()
+			aiRes, aiErr = e.translateAI(ctx, ai, text, from, to)
+		}()
+	}
 	if e.core != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), googleProxyTimeout)
-		result, err := e.translateGoogle(ctx, e.core, text, from, to)
-		cancel()
-		if usable(result, err) {
-			return result, nil
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), googleProxyTimeout)
+			defer cancel()
+			googleRes, googleErr = e.translateGoogle(ctx, e.core, text, from, to)
+		}()
+	}
+	group.Add(1)
+	go func() {
+		defer group.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), bingTimeout)
+		defer cancel()
+		bingRes, bingErr = e.translateBing(ctx, text, from, to)
+	}()
+	group.Wait()
+
+	results := make([]TranslateResult, 0, 3)
+	if aiOn && usable(aiRes, aiErr) {
+		results = append(results, aiRes)
+	}
+	if usable(googleRes, googleErr) {
+		results = append(results, googleRes)
+	}
+	if usable(bingRes, bingErr) {
+		results = append(results, bingRes)
+	}
+	note := ""
+	if aiOn && !usable(aiRes, aiErr) && len(results) > 0 {
+		note = "AI 这次没有返回，下面是对照译文。"
+	}
+	if len(results) > 0 {
+		if e.core == nil && usable(bingRes, bingErr) && !usable(googleRes, googleErr) && note == "" {
+			note = "谷歌要等核心开着才走当前节点。这次用必应直连。"
 		}
-		last = err
+		return TranslateBundle{Results: results, Note: note}, nil
 	}
 
-	if remain := time.Until(deadline); remain > 200*time.Millisecond {
-		timeout := myMemoryTimeout
-		if timeout > remain {
-			timeout = remain
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		result, err := e.translateMyMemory(ctx, text, from, to)
-		cancel()
-		if usable(result, err) {
-			return result, nil
-		}
-		if err != nil {
-			last = err
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), myMemoryTimeout)
+	memory, err := e.translateMyMemory(ctx, text, from, to)
+	cancel()
+	if usable(memory, err) {
+		return TranslateBundle{
+			Results: []TranslateResult{memory},
+			Note:    "谷歌和必应这次没返回，用了 MyMemory。",
+		}, nil
 	}
-
-	if remain := time.Until(deadline); remain >= minFallbackTimeout {
-		ctx, cancel := context.WithTimeout(context.Background(), remain)
-		result, err := e.translateBing(ctx, text, from, to)
-		cancel()
-		if usable(result, err) {
-			return result, nil
-		}
-		if err != nil {
-			last = err
-		}
+	if aiOn && aiErr != nil {
+		return TranslateBundle{}, aiErr
 	}
-
-	if last != nil && errors.Is(last, errTranslateDown) {
-		return TranslateResult{}, errTranslateDown
+	if err != nil && errors.Is(err, errTranslateDown) {
+		return TranslateBundle{}, errTranslateDown
 	}
-	return TranslateResult{}, errTranslateBad
+	if bingErr != nil && errors.Is(bingErr, errTranslateDown) {
+		return TranslateBundle{}, errTranslateDown
+	}
+	return TranslateBundle{}, errTranslateBad
 }
 
 var sharedTranslate = newTranslateEngine(nil, nil)
 
-// Translate tries Google through the core mixed/http inbound first (about 4s).
-// If the core is down or that attempt fails, it uses MyMemory directly (about 5s).
-// Bing is only a last fallback inside the remaining 8s budget.
-// Google is never dialed directly: clients5 hangs on a mainland direct path.
-func (a *App) Translate(text string, target string, coreProxy string) FlagResult {
+func (a *App) prepareTranslate(coreProxy string) {
 	proxyURL := ""
 	if got := a.GetSystemProxy(); got.Flag {
 		proxyURL = got.Data
@@ -660,13 +725,40 @@ func (a *App) Translate(text string, target string, coreProxy string) FlagResult
 	sharedTranslate.proxy = proxyTranslateClient(proxyURL)
 	sharedTranslate.core = explicitProxyClient(coreProxy)
 	sharedTranslate.mu.Unlock()
-	result, err := sharedTranslate.Translate(text, target)
+}
+
+// Translate runs Google through the core and Bing directly, at the same time.
+// MyMemory is used only when both return nothing. settingsJSON is the local AI
+// key, kept on this machine. Google is never dialed directly.
+func (a *App) Translate(text string, target string, coreProxy string, settingsJSON string) FlagResult {
+	a.prepareTranslate(coreProxy)
+	ai, err := parseAISettings(settingsJSON)
 	if err != nil {
-		return FlagResult{false, err.Error()}
+		return FlagResult{Flag: false, Data: "AI 设置读不出来"}
 	}
-	raw, err := json.Marshal(result)
+	bundle, err := sharedTranslate.TranslateAll(text, target, ai)
 	if err != nil {
-		return FlagResult{false, errTranslateBad.Error()}
+		return FlagResult{Flag: false, Data: err.Error()}
 	}
-	return FlagResult{true, string(raw)}
+	raw, err := json.Marshal(bundle)
+	if err != nil {
+		return FlagResult{Flag: false, Data: errTranslateBad.Error()}
+	}
+	return FlagResult{Flag: true, Data: string(raw)}
+}
+
+// TestTranslateAI checks a pasted key with one short sentence. The key is not stored here.
+func (a *App) TestTranslateAI(settingsJSON string, coreProxy string) FlagResult {
+	ai, err := parseAISettings(settingsJSON)
+	if err != nil || !ai.enabled() {
+		return FlagResult{Flag: false, Data: "请先填写 API Key"}
+	}
+	a.prepareTranslate(coreProxy)
+	ctx, cancel := context.WithTimeout(context.Background(), aiTimeout)
+	defer cancel()
+	result, err := sharedTranslate.translateAI(ctx, ai, "lol", "", "zh-Hans")
+	if err != nil {
+		return FlagResult{Flag: false, Data: err.Error()}
+	}
+	return FlagResult{Flag: true, Data: "测试通过：" + result.Text}
 }

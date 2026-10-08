@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { ClipboardGetText, ClipboardSetText, Translate } from '@/bridge'
+import { ClipboardGetText, ClipboardSetText, TestTranslateAI, Translate, type TranslateHit } from '@/bridge'
 import { useAppSettingsStore, useKernelApiStore } from '@/stores'
 import { message, sampleID } from '@/utils'
 
@@ -38,24 +38,55 @@ const targets = [
 ]
 
 const input = ref('')
-const output = ref('')
+const results = ref<TranslateHit[]>([])
+const note = ref('')
 const target = ref('auto')
-const lastFrom = ref('')
-const lastTo = ref('')
-const engine = ref('')
 const busy = ref(false)
+const testing = ref(false)
+const aiOpen = ref(false)
 const errorText = ref('')
+
+const presets = [
+  { id: 'custom', label: '自定义', baseUrl: '', model: '' },
+  { id: 'deepseek', label: 'DeepSeek', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
+  { id: 'qwen', label: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+  { id: 'zhipu', label: '智谱', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
+  { id: 'kimi', label: 'Kimi', baseUrl: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
+  { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+]
+
+const ai = computed(() => appSettings.app.translateAI)
+const primary = computed(() => results.value[0])
+const rest = computed(() => results.value.slice(1))
 
 const history = computed(() => (appSettings.app.translateHistory || []).slice(0, 20))
 
 const langLabel = (code: string) => targets.find((item) => item.value === code)?.label || code || t('translate.auto')
 
-const engineLabel = computed(() => {
-  if (engine.value === 'google') return t('translate.engineGoogle')
-  if (engine.value === 'mymemory') return t('translate.engineMyMemory')
-  if (engine.value === 'bing') return t('translate.engineBing')
-  return ''
+const hitLabel = (hit?: TranslateHit) => {
+  if (!hit) return ''
+  if (hit.provider === 'google') return t('translate.engineGoogle')
+  if (hit.provider === 'bing') return t('translate.engineBing')
+  if (hit.provider === 'mymemory') return t('translate.engineMyMemory')
+  if (hit.provider === 'deepl') return 'DeepL'
+  if (hit.provider === 'openai') return hit.label || 'AI'
+  return hit.label || hit.provider
+}
+
+const aiReady = computed(() => {
+  if (ai.value.provider === 'openai') return !!ai.value.apiKey && !!ai.value.baseUrl && !!ai.value.model
+  if (ai.value.provider === 'deepl') return !!ai.value.deeplKey
+  return false
 })
+
+const applyPreset = (id: string) => {
+  ai.value.preset = id
+  const preset = presets.find((item) => item.id === id)
+  if (!preset || preset.id === 'custom') return
+  ai.value.baseUrl = preset.baseUrl
+  ai.value.model = preset.model
+  ai.value.provider = 'openai'
+}
 
 const remember = (entry: { input: string; output: string; from: string; to: string; provider: string }) => {
   const next = [
@@ -75,17 +106,17 @@ const runTranslate = async () => {
   busy.value = true
   errorText.value = ''
   try {
-    const result = await Translate(text, target.value, coreProxyURL())
-    output.value = result.text
-    lastFrom.value = result.sourceLang || ''
-    lastTo.value = result.targetLang || ''
-    engine.value = result.provider || ''
+    const bundle = await Translate(text, target.value, coreProxyURL(), JSON.stringify(ai.value))
+    results.value = bundle.results || []
+    note.value = bundle.note || ''
+    const top = results.value[0]
+    if (!top?.text) throw new Error('翻译失败：翻译服务没有返回可用的结果。请稍后再试。')
     remember({
       input: text,
-      output: result.text,
-      from: result.sourceLang || '',
-      to: result.targetLang || target.value,
-      provider: result.provider || '',
+      output: top.text,
+      from: top.sourceLang || '',
+      to: top.targetLang || target.value,
+      provider: top.provider || '',
     })
   } catch (error) {
     const detail = String(error || '')
@@ -117,12 +148,13 @@ const pasteAndTranslate = async () => {
 }
 
 const copyResult = async () => {
-  if (!output.value.trim()) {
+  const text = primary.value?.text || ''
+  if (!text.trim()) {
     message.warn(t('translate.copyEmpty'))
     return
   }
   try {
-    await ClipboardSetText(output.value)
+    await ClipboardSetText(text)
     message.success(t('translate.copied'))
   } catch (error) {
     message.error(error)
@@ -131,28 +163,45 @@ const copyResult = async () => {
 
 const swap = () => {
   const previous = input.value
-  input.value = output.value
-  output.value = previous
-  if (lastFrom.value && targets.some((item) => item.value === lastFrom.value)) {
-    target.value = lastFrom.value
-  } else if (lastTo.value === 'en' || lastTo.value === 'zh-Hans') {
-    target.value = lastTo.value === 'en' ? 'zh-Hans' : 'en'
+  const top = primary.value
+  input.value = top?.text || ''
+  results.value = top?.text ? [{ ...top, text: previous, provider: '' }] : []
+  note.value = ''
+  if (top?.sourceLang && targets.some((item) => item.value === top.sourceLang)) {
+    target.value = top.sourceLang
+  } else if (top?.targetLang === 'en' || top?.targetLang === 'zh-Hans') {
+    target.value = top.targetLang === 'en' ? 'zh-Hans' : 'en'
   }
-  const from = lastFrom.value
-  lastFrom.value = lastTo.value
-  lastTo.value = from
-  engine.value = ''
   errorText.value = ''
 }
 
 const restore = (item: { input: string; output: string; from: string; to: string; provider?: string }) => {
   input.value = item.input
-  output.value = item.output
-  lastFrom.value = item.from
-  lastTo.value = item.to
-  engine.value = item.provider || ''
+  results.value = [
+    {
+      text: item.output,
+      sourceLang: item.from,
+      targetLang: item.to,
+      provider: item.provider || '',
+    },
+  ]
+  note.value = ''
   if (item.to) target.value = item.to
   errorText.value = ''
+}
+
+const testAI = async () => {
+  testing.value = true
+  errorText.value = ''
+  try {
+    message.success(await TestTranslateAI(JSON.stringify(ai.value), coreProxyURL()))
+  } catch (error) {
+    const detail = String(error || '')
+    errorText.value = detail
+    message.error(detail)
+  } finally {
+    testing.value = false
+  }
 }
 
 const preview = (text: string) => (text.length > 42 ? text.slice(0, 42) + '…' : text)
@@ -182,11 +231,20 @@ const preview = (text: string) => (text.length > 42 ? text.slice(0, 42) + '…' 
       <label class="tr-pane">
         <span>
           {{ t('translate.result') }}
-          <em v-if="lastFrom || lastTo">{{ langLabel(lastFrom) }} → {{ langLabel(lastTo) }}</em>
+          <em v-if="primary && (primary.sourceLang || primary.targetLang)">{{ langLabel(primary.sourceLang) }} → {{ langLabel(primary.targetLang) }}</em>
         </span>
-        <textarea v-model="output" class="tr-box" readonly :placeholder="t('translate.resultPh')" />
-        <p v-if="engineLabel" class="tr-engine">{{ engineLabel }}</p>
+        <textarea class="tr-box" readonly :value="primary?.text || ''" :placeholder="t('translate.resultPh')" />
+        <p v-if="primary" class="tr-engine">
+          {{ hitLabel(primary) }}
+          <em v-if="primary.sourceLang || primary.targetLang">{{ langLabel(primary.sourceLang) }} → {{ langLabel(primary.targetLang) }}</em>
+        </p>
       </label>
+    </div>
+    <div v-if="rest.length" class="tr-compare">
+      <div v-for="(row, index) in rest" :key="`${row.provider}-${index}`" class="tr-compare-row">
+        <b>{{ hitLabel(row) }}</b>
+        <span>{{ row.text }}</span>
+      </div>
     </div>
 
     <div class="tr-actions">
@@ -200,7 +258,51 @@ const preview = (text: string) => (text.length > 42 ? text.slice(0, 42) + '…' 
       <span class="tr-keys">Ctrl+Enter</span>
     </div>
     <div v-if="errorText" class="tr-error">{{ errorText }}</div>
+    <div v-if="note" class="tr-note">{{ note }}</div>
     <div class="tr-note">{{ t('translate.direct') }}</div>
+
+    <button type="button" class="tr-ai-toggle" @click="aiOpen = !aiOpen">
+      <b>{{ t('translate.aiTitle') }}</b>
+      <span>{{ aiReady ? t('translate.aiReady') : t('translate.aiEmpty') }}</span>
+    </button>
+    <div v-if="aiOpen" class="tr-ai">
+      <label class="tr-field">
+        <span>{{ t('translate.aiMode') }}</span>
+        <select class="tr-select" :value="ai.provider" @change="ai.provider = ($event.target as HTMLSelectElement).value as 'off' | 'openai' | 'deepl'">
+          <option value="off">{{ t('translate.aiOff') }}</option>
+          <option value="openai">{{ t('translate.aiOpenAI') }}</option>
+          <option value="deepl">{{ t('translate.aiDeepL') }}</option>
+        </select>
+      </label>
+      <template v-if="ai.provider === 'openai'">
+        <label class="tr-field">
+          <span>{{ t('translate.aiPreset') }}</span>
+          <select class="tr-select" :value="ai.preset" @change="applyPreset(($event.target as HTMLSelectElement).value)">
+            <option v-for="item in presets" :key="item.id" :value="item.id">{{ item.label }}</option>
+          </select>
+        </label>
+        <label class="tr-field tr-field-grow">
+          <span>{{ t('translate.aiBase') }}</span>
+          <input v-model="ai.baseUrl" class="tr-select" autocomplete="off" placeholder="https://api.deepseek.com" />
+        </label>
+        <label class="tr-field">
+          <span>{{ t('translate.aiModel') }}</span>
+          <input v-model="ai.model" class="tr-select" autocomplete="off" placeholder="deepseek-chat" />
+        </label>
+        <label class="tr-field tr-field-grow">
+          <span>{{ t('translate.aiKey') }}</span>
+          <input v-model="ai.apiKey" class="tr-select" type="password" autocomplete="new-password" />
+        </label>
+      </template>
+      <label v-else-if="ai.provider === 'deepl'" class="tr-field tr-field-grow">
+        <span>{{ t('translate.aiKey') }}</span>
+        <input v-model="ai.deeplKey" class="tr-select" type="password" autocomplete="new-password" />
+      </label>
+      <button v-if="ai.provider !== 'off'" type="button" class="ghost-btn" :disabled="testing" @click="testAI">
+        {{ testing ? t('translate.aiTesting') : t('translate.aiTest') }}
+      </button>
+      <p class="tr-note">{{ ai.provider === 'deepl' ? t('translate.aiDeepLHint') : t('translate.aiKeyHint') }}</p>
+    </div>
 
     <div class="group">
       <b>{{ t('translate.history') }}</b>

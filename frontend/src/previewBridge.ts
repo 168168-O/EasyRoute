@@ -110,12 +110,58 @@ export const installPreviewBridge = () => {
     },
     PickFile: () => Promise.resolve({ flag: false, data: 'cancelled' }),
     BackgroundVideoURL: () => Promise.resolve({ flag: false, data: 'none' }),
-    Translate: async (text, target) => {
+    Translate: async (text, target, _coreProxy, settings) => {
       const raw = String(text || '').trim()
       if (!raw) return { flag: false, data: '请先输入要翻译的内容' }
       const chinese = /[\u4e00-\u9fff]/.test(raw)
       const chosen = String(target || 'auto')
       const to = chosen !== 'auto' ? chosen : chinese ? 'en' : 'zh-Hans'
+      let aiOn = false
+      try {
+        const parsed = JSON.parse(String(settings || '{}')) as {
+          provider?: string
+          apiKey?: string
+          baseUrl?: string
+          model?: string
+          deeplKey?: string
+        }
+        aiOn =
+          (parsed.provider === 'openai' && !!parsed.apiKey && !!parsed.baseUrl && !!parsed.model) ||
+          (parsed.provider === 'deepl' && !!parsed.deeplKey)
+      } catch {
+        aiOn = false
+      }
+      try {
+        const response = await fetch(
+          `./__preview/bing?text=${encodeURIComponent(raw)}&to=${encodeURIComponent(to)}`,
+        )
+        const data = (await response.json()) as {
+          flag?: boolean
+          text?: string
+          sourceLang?: string
+          targetLang?: string
+        }
+        const translated = String(data.text || '').trim()
+        if (data.flag && translated) {
+          return ok(
+            JSON.stringify({
+              results: [
+                {
+                  text: translated,
+                  sourceLang: data.sourceLang || (chinese ? 'zh-Hans' : 'en'),
+                  targetLang: data.targetLang || to,
+                  provider: 'bing',
+                },
+              ],
+              note: aiOn
+                ? '预览环境不代发模型请求。下面是必应直连。谷歌要等核心开着才走当前节点。'
+                : '谷歌要等核心开着才走当前节点。这次用必应直连。',
+            }),
+          )
+        }
+      } catch {
+        /* Bing missed. MyMemory is the last fallback. */
+      }
       const source = chinese ? 'zh-CN' : 'en'
       const targetCode = to === 'zh-Hans' ? 'zh-CN' : to === 'zh-Hant' ? 'zh-TW' : to
       const endpoint =
@@ -133,15 +179,39 @@ export const installPreviewBridge = () => {
         }
         return ok(
           JSON.stringify({
-            text: translated,
-            sourceLang: chinese ? 'zh-Hans' : source,
-            targetLang: to,
-            provider: 'mymemory',
+            results: [
+              {
+                text: translated,
+                sourceLang: chinese ? 'zh-Hans' : source,
+                targetLang: to,
+                provider: 'mymemory',
+              },
+            ],
+            note: '谷歌和必应这次没返回，用了 MyMemory。',
           }),
         )
       } catch {
         return { flag: false, data: '翻译失败：连不上翻译服务。请检查网络后再试。' }
       }
+    },
+    TestTranslateAI: async (settings) => {
+      let ready = false
+      try {
+        const parsed = JSON.parse(String(settings || '{}')) as {
+          provider?: string
+          apiKey?: string
+          baseUrl?: string
+          model?: string
+          deeplKey?: string
+        }
+        ready =
+          (parsed.provider === 'openai' && !!parsed.apiKey && !!parsed.baseUrl && !!parsed.model) ||
+          (parsed.provider === 'deepl' && !!parsed.deeplKey)
+      } catch {
+        return { flag: false, data: 'AI 设置读不出来' }
+      }
+      if (!ready) return { flag: false, data: '请先填写 API Key' }
+      return { flag: false, data: '预览环境不代发模型请求。在软件里测试会走本机网络。' }
     },
     ExportBackup: () => ok('预览环境：备份已准备'),
     RestoreBackup: () => ok('已恢复，请重启软件'),

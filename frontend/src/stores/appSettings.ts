@@ -63,6 +63,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     pinnedRoutes: { wechat: 'direct', douyin: 'direct' },
     domesticDirect: true,
     simpleMode: true,
+    translateAI: {
+      provider: 'off',
+      baseUrl: '',
+      apiKey: '',
+      model: '',
+      deeplKey: '',
+      preset: 'custom',
+    },
     translateHistory: [],
     primaryColor: '#000',
     secondaryColor: '#545454',
@@ -225,6 +233,22 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     if (!Array.isArray(settings.appPrograms)) settings.appPrograms = []
     // A saved 走代理 stays 走代理. Missing or invalid values stay 走本地.
     settings.pinnedRoutes = normalizePinnedRoutes(settings.pinnedRoutes)
+    if (!settings.translateAI) {
+      settings.translateAI = {
+        provider: 'off',
+        baseUrl: '',
+        apiKey: '',
+        model: '',
+        deeplKey: '',
+        preset: 'custom',
+      }
+    }
+    if (!settings.translateAI.provider) settings.translateAI.provider = 'off'
+    settings.translateAI.baseUrl = settings.translateAI.baseUrl || ''
+    settings.translateAI.apiKey = settings.translateAI.apiKey || ''
+    settings.translateAI.model = settings.translateAI.model || ''
+    settings.translateAI.deeplKey = settings.translateAI.deeplKey || ''
+    settings.translateAI.preset = settings.translateAI.preset || 'custom'
     if (!Array.isArray(settings.translateHistory)) settings.translateHistory = []
     settings.translateHistory = settings.translateHistory.slice(0, 20)
     migrateAppSettings(settings, !!data)

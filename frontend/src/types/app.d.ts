@@ -75,6 +75,15 @@ declare namespace App {
     exitOnCloseMigrated?: boolean
     sortByDelayDefaulted?: boolean
     addGroupToMenuDefaulted?: boolean
+    /** Local only. The key stays in user.yaml and is never sent except to the chosen model. */
+    translateAI: {
+      provider: 'off' | 'openai' | 'deepl'
+      baseUrl: string
+      apiKey: string
+      model: string
+      deeplKey: string
+      preset: string
+    }
     translateHistory: {
       id: string
       input: string

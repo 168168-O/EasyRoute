@@ -117,15 +117,31 @@ export const BackgroundVideoURL = async () => {
   return data as string
 }
 
-export const Translate = async (text: string, target: string, coreProxy = '') => {
-  const { flag, data } = await Bridge.Translate(text, target, coreProxy)
+export interface TranslateHit {
+  text: string
+  sourceLang: string
+  targetLang: string
+  provider: string
+  label?: string
+}
+
+export interface TranslateBundle {
+  results: TranslateHit[]
+  note?: string
+}
+
+export const Translate = async (text: string, target: string, coreProxy = '', settings = '') => {
+  const { flag, data } = await Bridge.Translate(text, target, coreProxy, settings)
   if (!flag) throw data
-  return JSON.parse(data) as {
-    text: string
-    sourceLang: string
-    targetLang: string
-    provider: string
-  }
+  const parsed = JSON.parse(data) as TranslateBundle & TranslateHit
+  if (Array.isArray(parsed.results)) return parsed
+  return { results: [parsed], note: '' }
+}
+
+export const TestTranslateAI = async (settings: string, coreProxy = '') => {
+  const { flag, data } = await Bridge.TestTranslateAI(settings, coreProxy)
+  if (!flag) throw data
+  return data
 }
 
 export const Notify = async (title: string, body: string) => {

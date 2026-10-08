@@ -88,7 +88,9 @@ export function StopServer(arg1:string):Promise<bridge.FlagResult>;
 
 export function TcpPing(arg1:string,arg2:bridge.NetOptions):Promise<bridge.FlagResult>;
 
-export function Translate(arg1:string,arg2:string,arg3:string):Promise<bridge.FlagResult>;
+export function Translate(arg1:string,arg2:string,arg3:string,arg4:string):Promise<bridge.FlagResult>;
+
+export function TestTranslateAI(arg1:string,arg2:string):Promise<bridge.FlagResult>;
 
 export function TcpRequest(arg1:string,arg2:string,arg3:bridge.NetOptions):Promise<bridge.FlagResult>;
 
