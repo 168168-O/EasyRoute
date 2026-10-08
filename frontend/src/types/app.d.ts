@@ -74,6 +74,7 @@ declare namespace App {
       output: string
       from: string
       to: string
+      provider?: string
       at: number
     }[]
     primaryColor: string

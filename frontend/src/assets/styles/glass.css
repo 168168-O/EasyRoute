@@ -1034,6 +1034,12 @@ body[theme-mode='light'] .note b {
 .tr-keys { color: var(--text-3); font-size: 12px; }
 .tr-error { margin-top: 10px; color: #ffd0d0; }
 .tr-note { margin-top: 8px; color: var(--text-3); font-size: 12px; }
+.tr-engine {
+  margin: 6px 0 0;
+  color: #c5d0dc;
+  font-size: 12px;
+  line-height: 16px;
+}
 .tr-history {
   display: flex;
   flex-direction: column;
@@ -1066,6 +1072,7 @@ body[theme-mode='light'] .tr-select {
   background: rgba(255, 255, 255, 0.72);
 }
 body[theme-mode='light'] .tr-error { color: #9d1c1c; }
+body[theme-mode='light'] .tr-engine { color: #3c4c60; }
 
 /* One frosted ring for every gold/accent-filled control. The angle lives on
    the element so the 6s spin stays a single cheap custom-property animation. */

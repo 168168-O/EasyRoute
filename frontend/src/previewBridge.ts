@@ -79,14 +79,38 @@ export const installPreviewBridge = () => {
     },
     PickFile: () => Promise.resolve({ flag: false, data: 'cancelled' }),
     BackgroundVideoURL: () => Promise.resolve({ flag: false, data: 'none' }),
-    Translate: (text, target) => {
+    Translate: async (text, target) => {
       const raw = String(text || '').trim()
-      if (!raw) return Promise.resolve({ flag: false, data: '请先输入要翻译的内容' })
+      if (!raw) return { flag: false, data: '请先输入要翻译的内容' }
       const chinese = /[\u4e00-\u9fff]/.test(raw)
       const chosen = String(target || 'auto')
       const to = chosen !== 'auto' ? chosen : chinese ? 'en' : 'zh-Hans'
-      const translated = chinese ? `[en] ${raw}` : `[中文] ${raw}`
-      return ok(JSON.stringify({ text: translated, sourceLang: chinese ? 'zh-Hans' : 'en', targetLang: to, provider: 'bing' }))
+      const source = chinese ? 'zh-CN' : 'en'
+      const targetCode = to === 'zh-Hans' ? 'zh-CN' : to === 'zh-Hant' ? 'zh-TW' : to
+      const endpoint =
+        'https://api.mymemory.translated.net/get?q=' +
+        encodeURIComponent(raw) +
+        '&langpair=' +
+        encodeURIComponent(`${source}|${targetCode}`)
+      try {
+        const response = await fetch(`./__preview/http?url=${encodeURIComponent(endpoint)}`)
+        const data = (await response.json()) as { flag?: boolean; body?: string }
+        const payload = JSON.parse(data.body || '{}') as { responseData?: { translatedText?: string } }
+        const translated = String(payload.responseData?.translatedText || '').trim()
+        if (!data.flag || !translated || translated.includes('MYMEMORY WARNING')) {
+          return { flag: false, data: '翻译失败：翻译服务没有返回可用的结果。请稍后再试。' }
+        }
+        return ok(
+          JSON.stringify({
+            text: translated,
+            sourceLang: chinese ? 'zh-Hans' : source,
+            targetLang: to,
+            provider: 'mymemory',
+          }),
+        )
+      } catch {
+        return { flag: false, data: '翻译失败：连不上翻译服务。请检查网络后再试。' }
+      }
     },
     GetInterfaces: () => ok(''),
     GetSystemProxy: () => Promise.resolve({ flag: false, data: '' }),

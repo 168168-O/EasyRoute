@@ -2,8 +2,10 @@ package bridge
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
+	"html"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,8 +18,16 @@ import (
 )
 
 const (
-	defaultGoogleURL   = "https://translate.googleapis.com/translate_a/single"
+	// clients5 is reachable through the core. A direct dial from mainland telecom hangs.
+	defaultGoogleURL   = "https://clients5.google.com/translate_a/single"
+	defaultMyMemoryURL = "https://api.mymemory.translated.net/get"
 	translateUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
+	// Google through the core, then MyMemory, then a short last fallback. 4s + the
+	// remaining slice of an 8s budget stays under the worst case that direct Google used to burn.
+	translateBudget    = 8 * time.Second
+	googleProxyTimeout = 4 * time.Second
+	myMemoryTimeout    = 5 * time.Second
+	minFallbackTimeout = 1500 * time.Millisecond
 )
 
 var (
@@ -197,21 +207,23 @@ type bingCreds struct {
 }
 
 type translateEngine struct {
-	mu        sync.Mutex
-	direct    *http.Client
-	proxy     *http.Client
-	core      *http.Client
-	bingPages []string
-	googleURL string
-	creds     bingCreds
+	mu          sync.Mutex
+	direct      *http.Client
+	proxy       *http.Client
+	core        *http.Client
+	bingPages   []string
+	googleURL   string
+	myMemoryURL string
+	creds       bingCreds
 }
 
 func newTranslateEngine(direct, proxy *http.Client) *translateEngine {
 	return &translateEngine{
-		direct:    direct,
-		proxy:     proxy,
-		bingPages: append([]string(nil), defaultBingPages...),
-		googleURL: defaultGoogleURL,
+		direct:      direct,
+		proxy:       proxy,
+		bingPages:   append([]string(nil), defaultBingPages...),
+		googleURL:   defaultGoogleURL,
+		myMemoryURL: defaultMyMemoryURL,
 	}
 }
 
@@ -262,20 +274,23 @@ func envProxyConfigured() bool {
 	return false
 }
 
-func (e *translateEngine) do(method, rawURL, body string, headers map[string]string) (int, []byte, error) {
-	status, payload, _, err := e.doClient(e.direct, method, rawURL, body, headers)
+func (e *translateEngine) do(ctx context.Context, method, rawURL, body string, headers map[string]string) (int, []byte, error) {
+	status, payload, _, err := e.doClient(ctx, e.direct, method, rawURL, body, headers)
 	if e.proxy == nil || (err == nil && status < 500) {
 		return status, payload, err
 	}
-	status, payload, _, err = e.doClient(e.proxy, method, rawURL, body, headers)
+	status, payload, _, err = e.doClient(ctx, e.proxy, method, rawURL, body, headers)
 	return status, payload, err
 }
 
-func (e *translateEngine) doClient(client *http.Client, method, rawURL, body string, headers map[string]string) (int, []byte, string, error) {
+func (e *translateEngine) doClient(ctx context.Context, client *http.Client, method, rawURL, body string, headers map[string]string) (int, []byte, string, error) {
 	if client == nil {
 		return 0, nil, "", errors.New("no client")
 	}
-	req, err := http.NewRequest(method, rawURL, bytes.NewReader([]byte(body)))
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	req, err := http.NewRequestWithContext(ctx, method, rawURL, bytes.NewReader([]byte(body)))
 	if err != nil {
 		return 0, nil, "", err
 	}
@@ -336,7 +351,7 @@ func strconvParseInt(raw string) (int64, error) {
 	return n, nil
 }
 
-func (e *translateEngine) loadBingCreds(client *http.Client) (bingCreds, error) {
+func (e *translateEngine) loadBingCreds(ctx context.Context, client *http.Client) (bingCreds, error) {
 	e.mu.Lock()
 	if e.creds.token != "" && time.Now().Before(e.creds.until) {
 		creds := e.creds
@@ -348,7 +363,7 @@ func (e *translateEngine) loadBingCreds(client *http.Client) (bingCreds, error) 
 
 	var last error = errTranslateDown
 	for _, page := range pages {
-		status, body, finalURL, err := e.doClient(client, http.MethodGet, page, "", map[string]string{
+		status, body, finalURL, err := e.doClient(ctx, client, http.MethodGet, page, "", map[string]string{
 			"Accept": "text/html",
 		})
 		if err != nil || status != http.StatusOK {
@@ -368,11 +383,11 @@ func (e *translateEngine) loadBingCreds(client *http.Client) (bingCreds, error) 
 	return bingCreds{}, last
 }
 
-func (e *translateEngine) bingOnce(client *http.Client, text, from, to string) (TranslateResult, error) {
+func (e *translateEngine) bingOnce(ctx context.Context, client *http.Client, text, from, to string) (TranslateResult, error) {
 	if client == nil {
 		return TranslateResult{}, errTranslateDown
 	}
-	creds, err := e.loadBingCreds(client)
+	creds, err := e.loadBingCreds(ctx, client)
 	if err != nil {
 		return TranslateResult{}, err
 	}
@@ -386,7 +401,7 @@ func (e *translateEngine) bingOnce(client *http.Client, text, from, to string) (
 	form.Set("text", text)
 	form.Set("token", creds.token)
 	form.Set("key", creds.key)
-	status, body, _, err := e.doClient(client, http.MethodPost, creds.postURL, form.Encode(), map[string]string{
+	status, body, _, err := e.doClient(ctx, client, http.MethodPost, creds.postURL, form.Encode(), map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
 		"Referer":      "https://www.bing.com/translator",
 	})
@@ -420,68 +435,154 @@ func (e *translateEngine) bingOnce(client *http.Client, text, from, to string) (
 	}, nil
 }
 
-func (e *translateEngine) translateBing(text, from, to string) (TranslateResult, error) {
-	result, err := e.bingOnce(e.direct, text, from, to)
+func (e *translateEngine) translateBing(ctx context.Context, text, from, to string) (TranslateResult, error) {
+	result, err := e.bingOnce(ctx, e.direct, text, from, to)
 	if err == nil {
 		return result, nil
 	}
-	if e.proxy == nil || !errors.Is(err, errTranslateDown) {
+	if e.proxy == nil || !errors.Is(err, errTranslateDown) || ctx.Err() != nil {
 		return TranslateResult{}, err
 	}
 	e.mu.Lock()
 	e.creds = bingCreds{}
 	e.mu.Unlock()
-	return e.bingOnce(e.proxy, text, from, to)
+	return e.bingOnce(ctx, e.proxy, text, from, to)
 }
 
-func (e *translateEngine) translateGoogle(text, from, to string) (TranslateResult, error) {
-	form := url.Values{}
-	form.Set("q", text)
+func myMemoryLang(code string) string {
+	switch code {
+	case "zh-Hans", "":
+		return "zh-CN"
+	case "zh-Hant":
+		return "zh-TW"
+	default:
+		return code
+	}
+}
+
+// myMemorySource picks an explicit pair. MyMemory has no auto-detect.
+func myMemorySource(text, from string) string {
+	if from != "" {
+		return myMemoryLang(from)
+	}
+	var hangul, kana, cyrillic, han, letters int
+	for _, r := range text {
+		switch {
+		case unicode.Is(unicode.Hangul, r):
+			hangul++
+			letters++
+		case unicode.In(r, unicode.Hiragana, unicode.Katakana):
+			kana++
+			letters++
+		case unicode.Is(unicode.Cyrillic, r):
+			cyrillic++
+			letters++
+		case unicode.Is(unicode.Han, r):
+			han++
+			letters++
+		case unicode.IsLetter(r):
+			letters++
+		}
+	}
+	switch {
+	case kana > 0 && kana >= hangul && kana >= cyrillic:
+		return "ja"
+	case hangul > 0 && hangul >= cyrillic:
+		return "ko"
+	case cyrillic > 0:
+		return "ru"
+	case han > 0:
+		return "zh-CN"
+	default:
+		return "en"
+	}
+}
+
+func parseMyMemory(body []byte) (string, error) {
+	var payload struct {
+		ResponseData struct {
+			TranslatedText string `json:"translatedText"`
+		} `json:"responseData"`
+		ResponseStatus  int    `json:"responseStatus"`
+		ResponseDetails string `json:"responseDetails"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return "", err
+	}
+	text := strings.TrimSpace(html.UnescapeString(payload.ResponseData.TranslatedText))
+	details := strings.ToUpper(payload.ResponseDetails + " " + text)
+	if payload.ResponseStatus != http.StatusOK || text == "" || strings.Contains(details, "MYMEMORY WARNING") || strings.Contains(details, "INVALID LANGUAGE PAIR") {
+		return "", errTranslateBad
+	}
+	return text, nil
+}
+
+func (e *translateEngine) translateGoogle(ctx context.Context, client *http.Client, text, from, to string) (TranslateResult, error) {
+	if client == nil {
+		return TranslateResult{}, errTranslateDown
+	}
 	source := from
 	if source == "" {
 		source = "auto"
 	}
-	endpoint := e.googleURL + "?client=gtx&sl=" + url.QueryEscape(googleLang(source)) + "&tl=" + url.QueryEscape(googleLang(to)) + "&dt=t"
-	headers := map[string]string{
-		"Content-Type": "application/x-www-form-urlencoded",
+	// Direct clients5 hangs on mainland telecom. This client is only the core inbound.
+	endpoint := e.googleURL + "?client=gtx&sl=" + url.QueryEscape(googleLang(source)) + "&tl=" + url.QueryEscape(googleLang(to)) + "&dt=t&q=" + url.QueryEscape(text)
+	status, body, _, err := e.doClient(ctx, client, http.MethodGet, endpoint, "", nil)
+	if err != nil || status >= 500 {
+		return TranslateResult{}, errTranslateDown
 	}
-	// Google is blocked on a direct mainland path. Prefer the running sing-box
-	// mixed/http inbound, then try direct. Bing does not use this client.
-	clients := make([]*http.Client, 0, 2)
-	if e.core != nil {
-		clients = append(clients, e.core)
+	if status != http.StatusOK {
+		return TranslateResult{}, errTranslateBad
 	}
-	if e.direct != nil {
-		clients = append(clients, e.direct)
+	translated, err := parseGoogleTranslations(body)
+	if err != nil {
+		return TranslateResult{}, errTranslateBad
 	}
-	var last error = errTranslateDown
-	for _, client := range clients {
-		status, body, _, err := e.doClient(client, http.MethodPost, endpoint, form.Encode(), headers)
-		if err != nil || status >= 500 {
-			last = errTranslateDown
-			continue
-		}
-		if status != http.StatusOK {
-			last = errTranslateBad
-			continue
-		}
-		translated, err := parseGoogleTranslations(body)
-		if err != nil {
-			last = errTranslateBad
-			continue
-		}
-		detected := source
-		if detected == "auto" {
-			detected = ""
-		}
-		return TranslateResult{
-			Text:       translated,
-			SourceLang: detected,
-			TargetLang: to,
-			Provider:   "google",
-		}, nil
+	detected := source
+	if detected == "auto" {
+		detected = ""
 	}
-	return TranslateResult{}, last
+	return TranslateResult{
+		Text:       translated,
+		SourceLang: detected,
+		TargetLang: to,
+		Provider:   "google",
+	}, nil
+}
+
+func (e *translateEngine) translateMyMemory(ctx context.Context, text, from, to string) (TranslateResult, error) {
+	source := myMemorySource(text, from)
+	target := myMemoryLang(to)
+	if source == target {
+		if target == "zh-CN" {
+			source = "en"
+		} else {
+			target = "zh-CN"
+		}
+	}
+	endpoint := e.myMemoryURL + "?q=" + url.QueryEscape(text) + "&langpair=" + url.QueryEscape(source+"|"+target)
+	status, body, _, err := e.doClient(ctx, e.direct, http.MethodGet, endpoint, "", nil)
+	if err != nil || status >= 500 {
+		return TranslateResult{}, errTranslateDown
+	}
+	translated, err := parseMyMemory(body)
+	if err != nil {
+		return TranslateResult{}, err
+	}
+	detected := from
+	if detected == "" {
+		detected = source
+	}
+	return TranslateResult{
+		Text:       translated,
+		SourceLang: detected,
+		TargetLang: to,
+		Provider:   "mymemory",
+	}, nil
+}
+
+func usable(result TranslateResult, err error) bool {
+	return err == nil && strings.TrimSpace(result.Text) != ""
 }
 
 func (e *translateEngine) Translate(text, target string) (TranslateResult, error) {
@@ -493,15 +594,49 @@ func (e *translateEngine) Translate(text, target string) (TranslateResult, error
 		return TranslateResult{}, errTranslateTooLong
 	}
 	from, to := ResolveLanguages(text, target)
-	result, bingErr := e.translateBing(text, from, to)
-	if bingErr == nil && strings.TrimSpace(result.Text) != "" {
-		return result, nil
+	deadline := time.Now().Add(translateBudget)
+	var last error = errTranslateDown
+
+	// Google only through the running core. A direct clients5 attempt is not started.
+	if e.core != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), googleProxyTimeout)
+		result, err := e.translateGoogle(ctx, e.core, text, from, to)
+		cancel()
+		if usable(result, err) {
+			return result, nil
+		}
+		last = err
 	}
-	result, googleErr := e.translateGoogle(text, from, to)
-	if googleErr == nil && strings.TrimSpace(result.Text) != "" {
-		return result, nil
+
+	if remain := time.Until(deadline); remain > 200*time.Millisecond {
+		timeout := myMemoryTimeout
+		if timeout > remain {
+			timeout = remain
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		result, err := e.translateMyMemory(ctx, text, from, to)
+		cancel()
+		if usable(result, err) {
+			return result, nil
+		}
+		if err != nil {
+			last = err
+		}
 	}
-	if bingErr != nil && errors.Is(bingErr, errTranslateDown) && (googleErr == nil || errors.Is(googleErr, errTranslateDown)) {
+
+	if remain := time.Until(deadline); remain >= minFallbackTimeout {
+		ctx, cancel := context.WithTimeout(context.Background(), remain)
+		result, err := e.translateBing(ctx, text, from, to)
+		cancel()
+		if usable(result, err) {
+			return result, nil
+		}
+		if err != nil {
+			last = err
+		}
+	}
+
+	if last != nil && errors.Is(last, errTranslateDown) {
 		return TranslateResult{}, errTranslateDown
 	}
 	return TranslateResult{}, errTranslateBad
@@ -509,9 +644,10 @@ func (e *translateEngine) Translate(text, target string) (TranslateResult, error
 
 var sharedTranslate = newTranslateEngine(nil, nil)
 
-// Translate asks Bing's public translator directly, then Google if Bing fails.
-// Bing stays direct (a system proxy is used only when the direct attempt cannot connect).
-// coreProxy is the running sing-box mixed/http inbound, used only for the Google fallback.
+// Translate tries Google through the core mixed/http inbound first (about 4s).
+// If the core is down or that attempt fails, it uses MyMemory directly (about 5s).
+// Bing is only a last fallback inside the remaining 8s budget.
+// Google is never dialed directly: clients5 hangs on a mainland direct path.
 func (a *App) Translate(text string, target string, coreProxy string) FlagResult {
 	proxyURL := ""
 	if got := a.GetSystemProxy(); got.Flag {

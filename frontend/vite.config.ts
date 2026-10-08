@@ -4,6 +4,16 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 
+const previewHttpAllowed = (target: string) => {
+  if (PREVIEW_HTTP.has(target)) return true
+  try {
+    const parsed = new URL(target)
+    return parsed.protocol === 'https:' && parsed.host === 'api.mymemory.translated.net' && parsed.pathname === '/get'
+  } catch {
+    return false
+  }
+}
+
 const PREVIEW_HTTP = new Set([
   'https://myip.ipip.net',
   'http://myip.ipip.net',
@@ -48,12 +58,13 @@ const previewNet = (): Plugin => ({
       }
       if (url.pathname === '/__preview/http') {
         const target = url.searchParams.get('url') || ''
-        if (!PREVIEW_HTTP.has(target)) {
+        if (!previewHttpAllowed(target)) {
           sendJson(res, 400, { flag: false, status: 0, body: 'url not allowed' })
           return
         }
         const controller = new AbortController()
-        const timer = setTimeout(() => controller.abort(), 4000)
+        const timeoutMs = target.includes('api.mymemory.translated.net') ? 5000 : 4000
+        const timer = setTimeout(() => controller.abort(), timeoutMs)
         try {
           const response = await fetch(target, { signal: controller.signal, redirect: 'follow' })
           const landed = new URL(response.url)

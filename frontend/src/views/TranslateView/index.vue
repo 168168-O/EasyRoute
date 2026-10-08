@@ -42,6 +42,7 @@ const output = ref('')
 const target = ref('auto')
 const lastFrom = ref('')
 const lastTo = ref('')
+const engine = ref('')
 const busy = ref(false)
 const errorText = ref('')
 
@@ -49,7 +50,14 @@ const history = computed(() => (appSettings.app.translateHistory || []).slice(0,
 
 const langLabel = (code: string) => targets.find((item) => item.value === code)?.label || code || t('translate.auto')
 
-const remember = (entry: { input: string; output: string; from: string; to: string }) => {
+const engineLabel = computed(() => {
+  if (engine.value === 'google') return t('translate.engineGoogle')
+  if (engine.value === 'mymemory') return t('translate.engineMyMemory')
+  if (engine.value === 'bing') return t('translate.engineBing')
+  return ''
+})
+
+const remember = (entry: { input: string; output: string; from: string; to: string; provider: string }) => {
   const next = [
     { id: sampleID(), at: Date.now(), ...entry },
     ...history.value.filter((item) => !(item.input === entry.input && item.output === entry.output)),
@@ -71,11 +79,13 @@ const runTranslate = async () => {
     output.value = result.text
     lastFrom.value = result.sourceLang || ''
     lastTo.value = result.targetLang || ''
+    engine.value = result.provider || ''
     remember({
       input: text,
       output: result.text,
       from: result.sourceLang || '',
       to: result.targetLang || target.value,
+      provider: result.provider || '',
     })
   } catch (error) {
     const detail = String(error || '')
@@ -131,14 +141,16 @@ const swap = () => {
   const from = lastFrom.value
   lastFrom.value = lastTo.value
   lastTo.value = from
+  engine.value = ''
   errorText.value = ''
 }
 
-const restore = (item: { input: string; output: string; from: string; to: string }) => {
+const restore = (item: { input: string; output: string; from: string; to: string; provider?: string }) => {
   input.value = item.input
   output.value = item.output
   lastFrom.value = item.from
   lastTo.value = item.to
+  engine.value = item.provider || ''
   if (item.to) target.value = item.to
   errorText.value = ''
 }
@@ -173,6 +185,7 @@ const preview = (text: string) => (text.length > 42 ? text.slice(0, 42) + '…' 
           <em v-if="lastFrom || lastTo">{{ langLabel(lastFrom) }} → {{ langLabel(lastTo) }}</em>
         </span>
         <textarea v-model="output" class="tr-box" readonly :placeholder="t('translate.resultPh')" />
+        <p v-if="engineLabel" class="tr-engine">{{ engineLabel }}</p>
       </label>
     </div>
 

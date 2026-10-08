@@ -883,7 +883,10 @@ export default {
     copyEmpty: '还没有译文可以复制',
     history: '最近的翻译',
     historyEmpty: '还没有翻译记录',
-    direct: '优先直连翻译，不走代理；只有直连失败才会改走代理。',
+    direct: '核心开着时先用谷歌，走当前节点。失败或核心没开，再用 MyMemory 直连。',
+    engineGoogle: '谷歌',
+    engineMyMemory: 'MyMemory',
+    engineBing: '必应',
   },
   about: {
     credit: 'Based on GUI.for.SingBox (GPL-3.0)',
