@@ -210,7 +210,100 @@ const parseShareLine = (line: string): SingboxOutbound | undefined => {
     }
   }
 
+  if (scheme === 'vmess') return parseVmessLink(text)
+  if (scheme === 'ss') return parseShadowsocksLink(text)
+
   return undefined
+}
+
+const parseVmessLink = (text: string): SingboxOutbound | undefined => {
+  const payload = text.slice('vmess://'.length).split('#')[0] || ''
+  let info: Record<string, any>
+  try {
+    info = JSON.parse(decodeBase64Text(payload))
+  } catch {
+    return undefined
+  }
+  const server = asString(info.add || info.addr || info.server).trim()
+  const port = Number(info.port || 443)
+  if (!server || !port) return undefined
+  const tag = asString(info.ps || info.remark).trim() || `${server}:${port}`
+  const tlsOn = info.tls === 'tls' || info.tls === true || info.tls === '1'
+  const outbound: SingboxOutbound = {
+    type: 'vmess',
+    tag,
+    server,
+    server_port: port,
+    uuid: asString(info.id || info.uuid),
+    security: asString(info.scy || info.security || 'auto') || 'auto',
+  }
+  if (tlsOn) {
+    outbound.tls = { enabled: true, server_name: asString(info.sni || info.host || server) || server }
+  }
+  if (asString(info.net).toLowerCase() === 'ws') {
+    const host = asString(info.host).trim()
+    outbound.transport = {
+      type: 'ws',
+      path: asString(info.path || '/'),
+      ...(host ? { headers: { Host: host } } : {}),
+    }
+  }
+  return outbound
+}
+
+const parseShadowsocksLink = (text: string): SingboxOutbound | undefined => {
+  const hashAt = text.indexOf('#')
+  const tag = hashAt >= 0 ? decodeURIComponent(text.slice(hashAt + 1)) : ''
+  const body = (hashAt >= 0 ? text.slice('ss://'.length, hashAt) : text.slice('ss://'.length)).trim()
+  const toOutbound = (method: string, password: string, server: string, port: number, name: string) => {
+    if (!method || !server || !port) return undefined
+    return {
+      type: 'shadowsocks',
+      tag: name || `${server}:${port}`,
+      server,
+      server_port: port,
+      method,
+      password,
+    } satisfies SingboxOutbound
+  }
+  const at = body.lastIndexOf('@')
+  if (at > 0) {
+    let user = body.slice(0, at)
+    const hostport = body.slice(at + 1)
+    try {
+      if (!user.includes(':')) user = decodeBase64Text(user)
+    } catch {
+      return undefined
+    }
+    const split = user.indexOf(':')
+    const colon = hostport.lastIndexOf(':')
+    if (split <= 0 || colon <= 0) return undefined
+    return toOutbound(
+      user.slice(0, split),
+      user.slice(split + 1),
+      hostport.slice(0, colon),
+      Number(hostport.slice(colon + 1)),
+      tag,
+    )
+  }
+  try {
+    const decoded = decodeBase64Text(body)
+    const atDecoded = decoded.lastIndexOf('@')
+    const split = decoded.indexOf(':')
+    if (atDecoded <= split || split <= 0) return undefined
+    const hostport = decoded.slice(atDecoded + 1)
+    const colon = hostport.lastIndexOf(':')
+    if (colon <= 0) return undefined
+    return toOutbound(
+      decoded.slice(0, split),
+      decoded.slice(split + 1, atDecoded),
+      hostport.slice(0, colon),
+      Number(hostport.slice(colon + 1)),
+      tag,
+    )
+  } catch {
+    return undefined
+  }
 }
 
 export const parseShareText = (text: string): SingboxOutbound[] => {

@@ -8,6 +8,8 @@ import { DefaultExcludeProtocols } from '@/constant/kernel'
 import { PluginTriggerEvent, RequestMethod, RequestProxyMode } from '@/enums/app'
 import { usePluginsStore } from '@/stores'
 import { normalizeSubscriptionProxies } from '@/utils/subscriptionConvert'
+import { ensureFreeSubscription, expandsFreeSubscription, FREE_NODE_SUB_ID } from '@/utils/freeNodes'
+import { refreshFreeBackup } from '@/utils/freeNodeRefresh'
 import {
   sampleID,
   isValidSubJson,
@@ -31,6 +33,7 @@ export const useSubscribesStore = defineStore('subscribes', () => {
     data && (subscribes.value = parse(data))
 
     await migrateSubscribes(subscribes.value, saveSubscribes)
+    if (ensureFreeSubscription(subscribes.value)) await saveSubscribes().catch(() => undefined)
   }
 
   const saveSubscribes = () => {
@@ -205,7 +208,33 @@ export const useSubscribesStore = defineStore('subscribes', () => {
     }
   }
 
+  const refreshFreeEntry = async () => {
+    const sub = subscribes.value.find((item) => item.id === FREE_NODE_SUB_ID)
+    if (!sub || sub.disabled || sub.updating) return
+    sub.updating = true
+    try {
+      await refreshFreeBackup()
+    } catch {
+      // A failed source or probe keeps the previous nodes and stays quiet.
+    } finally {
+      sub.updating = false
+    }
+  }
+
+  const setFreeEnabled = async (enabled: boolean) => {
+    const sub = subscribes.value.find((item) => item.id === FREE_NODE_SUB_ID)
+    if (!sub) return
+    sub.disabled = !enabled
+    if (enabled) sub.updateTime = 0
+    await saveSubscribes()
+    if (enabled) await refreshFreeEntry()
+  }
+
   const updateSubscribe = async (id: string, options: Partial<App.Subscription> = {}) => {
+    if (id === FREE_NODE_SUB_ID) {
+      await refreshFreeEntry()
+      return `Subscription updated.`
+    }
     const s = subscribes.value.find((v) => v.id === id)
     if (!s) throw id + ' Not Found'
     if (s.disabled) throw s.name + ' Disabled'
@@ -245,9 +274,10 @@ export const useSubscribesStore = defineStore('subscribes', () => {
 
     const result = await asyncPool(
       5,
-      subscribes.value.filter((v) => !v.disabled),
+      subscribes.value.filter((v) => !v.disabled && !expandsFreeSubscription(v.id)),
       update,
     )
+    await refreshFreeEntry()
 
     if (needSave) await saveSubscribes()
 
@@ -306,5 +336,6 @@ export const useSubscribesStore = defineStore('subscribes', () => {
     getSubscribeById,
     importSubscribe,
     getSubscribeTemplate,
+    setFreeEnabled,
   }
 })

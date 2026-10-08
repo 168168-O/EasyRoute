@@ -713,6 +713,11 @@ body[theme-mode='light'] .sub-status {
   background: #fff;
   border-color: #8fb4d4;
 }
+body[theme-mode='light'] .free-urls {
+  background: #fff;
+  color: #142033;
+}
+
 body[theme-mode='light'] .sub-warn {
   background: #ffe7b0;
   color: #142033;

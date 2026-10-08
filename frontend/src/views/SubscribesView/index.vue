@@ -6,6 +6,7 @@ import { BrowserOpenURL, ClipboardSetText, RemoveFile } from '@/bridge'
 import { DraggableOptions, ViewOptions } from '@/constant/app'
 import { RequestProxyMode, View } from '@/enums/app'
 import { useSubscribesStore, useAppSettingsStore, usePluginsStore, useAppStore } from '@/stores'
+import { FREE_NODE_SUB_ID, FREE_NODE_WARNING } from '@/utils/freeNodes'
 import {
   formatBytes,
   formatRelativeTime,
@@ -176,8 +177,17 @@ const handleDeleteSub = async (s: App.Subscription) => {
 }
 
 const handleDisableSub = async (s: App.Subscription) => {
+  if (s.id === FREE_NODE_SUB_ID) {
+    await subscribeStore.setFreeEnabled(s.disabled)
+    return
+  }
   s.disabled = !s.disabled
   subscribeStore.editSubscribe(s.id, s)
+}
+
+const setFreeEnabled = (s: App.Subscription, enabled: boolean) => {
+  if (s.disabled === !enabled) return
+  void subscribeStore.setFreeEnabled(enabled)
 }
 
 const noUpdateNeeded = computed(() => subscribeStore.subscribes.every((v) => v.disabled))
@@ -301,7 +311,15 @@ const onSortUpdate = debounce(subscribeStore.saveSubscribes, 1000)
           {{ t('common.delete') }}
         </Button>
       </template>
-      <template v-if="appSettingsStore.app.subscribesView === View.List">
+      <template v-if="s.id === FREE_NODE_SUB_ID">
+        <div class="sub-warn">{{ FREE_NODE_WARNING }}</div>
+        <div class="free-toggle">
+          <span>使用免费备用节点</span>
+          <Switch :model-value="!s.disabled" @change="(on: boolean) => setFreeEnabled(s, on)" />
+        </div>
+        <div>可用节点 {{ s.proxies.length }}</div>
+      </template>
+      <template v-else-if="appSettingsStore.app.subscribesView === View.List">
         <div style="margin-bottom: 8px">
           <Progress :percent="clacTrafficPercent(s)" :status="clacTrafficStatus(s)" />
         </div>
@@ -363,6 +381,15 @@ const onSortUpdate = debounce(subscribeStore.saveSubscribes, 1000)
 </template>
 
 <style lang="less" scoped>
+.free-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
 .traffic-diagram {
   position: absolute;
   top: 40px;

@@ -22,6 +22,7 @@ import {
   createAsyncPool,
   buildSmartRegExp,
 } from '@/utils'
+import { FREE_NODE_GROUP, FREE_NODE_WARNING } from '@/utils/freeNodes'
 
 const expandedSet = ref<Set<string>>(new Set())
 const loadingSet = ref<Set<string>>(new Set())
@@ -87,6 +88,8 @@ const groups = computed(() => {
       return { ...group, all, chains, icon: iconMapping[group.name] }
     })
 })
+
+const showsFreeWarning = computed(() => groups.value.some((group) => group.name === FREE_NODE_GROUP))
 
 const useProxyWithCatchError = (group: any, proxy: any) => {
   handleUseProxy(group, proxy).catch((err: any) => message.error(err.message || err))
@@ -245,6 +248,7 @@ onActivated(() => {
 
 <template>
   <div class="m-8 mt-0 sticky top-0 z-3">
+    <div v-if="showsFreeWarning" class="sub-warn">{{ FREE_NODE_WARNING }}</div>
     <div
       class="proxy-toolbar sticky flex flex-wrap gap-8 items-center p-8 rounded-8"
       style="background-color: var(--card-bg)"

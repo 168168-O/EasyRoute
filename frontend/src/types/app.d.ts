@@ -232,6 +232,8 @@ declare namespace App {
     updateTime: number
     type: 'Http' | 'File' | 'Manual'
     url: string
+    /** Extra subscription URLs. The free-node entry keeps its source list here. */
+    urls?: string[]
     website: string
     path: string
     include: string

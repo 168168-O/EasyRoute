@@ -8,6 +8,8 @@
  * inferred from subscriptions or the current clash mode.
  */
 
+import { FREE_NODE_GROUP } from './freeNodes.ts'
+
 export type AppRouteMode = 'proxy' | 'direct'
 
 export interface RoutedProgram {
@@ -313,7 +315,11 @@ const findProxyOutbound = (config: Record<string, any>, explicit?: string) => {
   )
   if (processRule?.outbound) return String(processRule.outbound)
   const selector = ((config.outbounds || []) as Record<string, any>[]).find(
-    (outbound) => outbound.type === 'selector' && outbound.tag && outbound.tag !== 'GLOBAL',
+    (outbound) =>
+      outbound.type === 'selector' &&
+      outbound.tag &&
+      outbound.tag !== 'GLOBAL' &&
+      outbound.tag !== FREE_NODE_GROUP,
   )
   return selector?.tag ? String(selector.tag) : 'proxy'
 }
