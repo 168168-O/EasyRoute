@@ -17,6 +17,7 @@ import {
   usePluginsStore,
   useAppStore,
   useProfilesStore,
+  useSubscribesStore,
 } from '@/stores'
 import {
   debounce,
@@ -26,6 +27,7 @@ import {
   APP_VERSION,
   handleUseProxy,
 } from '@/utils'
+import { FREE_KEEP, FREE_NODE_GROUP, FREE_NODE_SUB_ID, freeNodeVisibleInGroup } from '@/utils/freeNodes'
 
 const getTrayIcons = () => {
   const envStore = useEnvStore()
@@ -95,6 +97,12 @@ const getTrayMenus = () => {
     const hiddenList = (profilesStore.currentProfile?.outbounds || []).flatMap((v) =>
       v.hidden ? v.tag : [],
     )
+    const freeSub = useSubscribesStore().getSubscribeById(FREE_NODE_SUB_ID)
+    const keptFreeTags = new Set(
+      !freeSub || freeSub.disabled
+        ? []
+        : freeSub.proxies.map((item) => item.tag).filter(Boolean).slice(0, FREE_KEEP),
+    )
     groupMenus = Object.values(proxies)
       .filter(
         (v) =>
@@ -106,6 +114,7 @@ const getTrayMenus = () => {
       .map((group) => {
         const all = (group.all || [])
           .filter((proxy) => {
+            if (!freeNodeVisibleInGroup(group.name, proxy, keptFreeTags)) return false
             const history = proxies[proxy]?.history || []
             const alive = (history[history.length - 1]?.delay || 0) > 0
             return (
@@ -128,6 +137,7 @@ const getTrayMenus = () => {
           })
         return { ...group, all }
       })
+      .filter((group) => group.name !== FREE_NODE_GROUP || group.all.length > 0)
       .map((group) => {
         return {
           type: 'item',

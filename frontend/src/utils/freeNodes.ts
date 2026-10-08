@@ -15,6 +15,8 @@ export const FREE_PARSE_CAP = 100
 export const FREE_KEEP = 5
 export const FREE_PROBE_CONCURRENCY = 2
 export const FREE_REFRESH_MS = 12 * 60 * 60 * 1000
+/** A node slower than this is discarded, same as a failed probe. */
+export const FREE_SLOW_MS = 5000
 export const FREE_TAG_PREFIX = 'free-'
 
 /** Public GitHub aggregators. The list on the subscription can be changed. */
@@ -114,19 +116,38 @@ export interface ProbeResult {
   node: SingboxOutbound
   ok: boolean
   delayMs: number
+  /** The core could not run the probe. This is not a dead node. */
+  unavailable?: boolean
 }
+
+export const isWorkingFreeProbe = (item: ProbeResult) =>
+  !item.unavailable && item.ok && item.delayMs > 0 && item.delayMs <= FREE_SLOW_MS
 
 export const rankFreeNodes = (results: ProbeResult[], keep = FREE_KEEP) =>
   results
-    .filter((item) => item.ok && item.delayMs >= 0)
+    .filter(isWorkingFreeProbe)
     .sort((a, b) => a.delayMs - b.delayMs || a.node.tag.localeCompare(b.node.tag))
     .slice(0, keep)
     .map((item) => item.node)
 
-/** No working nodes, or no source at all, leaves the previous five in place. */
-export const decideFreeList = (previous: SingboxOutbound[], best: SingboxOutbound[]) => {
-  if (!best.length) return { replace: false as const, proxies: previous }
-  return { replace: true as const, proxies: best }
+/**
+ * A real retest stores only the fastest working nodes.
+ * A kept node that failed or is too slow is dropped, and the next working
+ * candidate fills that slot. If the probe never ran, the previous nodes stay.
+ */
+export const decideFreeList = (previous: SingboxOutbound[], results: ProbeResult[], keep = FREE_KEEP) => {
+  const keptBefore = previous.filter(isProxyOutbound).slice(0, keep)
+  const tested = results.some((item) => !item.unavailable)
+  if (!tested) return { replace: false as const, proxies: keptBefore }
+  return { replace: true as const, proxies: rankFreeNodes(results, keep) }
+}
+
+/** Free node tags are visible only inside their own group, and only when kept. */
+export const freeNodeVisibleInGroup = (group: string, proxy: string, kept: ReadonlySet<string>) => {
+  if (proxy === FREE_NODE_GROUP) return group !== FREE_NODE_GROUP && kept.size > 0
+  const owned = proxy.startsWith(FREE_TAG_PREFIX) || kept.has(proxy)
+  if (!owned) return true
+  return group === FREE_NODE_GROUP && kept.has(proxy)
 }
 
 interface GeneratedOutbound {

@@ -13,7 +13,7 @@ import {
 } from '@/constant/app'
 import { ControllerCloseMode } from '@/enums/app'
 import { useBool } from '@/hooks'
-import { useAppSettingsStore, useKernelApiStore, useProfilesStore } from '@/stores'
+import { useAppSettingsStore, useKernelApiStore, useProfilesStore, useSubscribesStore } from '@/stores'
 import {
   ignoredError,
   sleep,
@@ -22,7 +22,7 @@ import {
   createAsyncPool,
   buildSmartRegExp,
 } from '@/utils'
-import { FREE_NODE_GROUP, FREE_NODE_WARNING } from '@/utils/freeNodes'
+import { FREE_KEEP, FREE_NODE_GROUP, FREE_NODE_SUB_ID, FREE_NODE_WARNING, freeNodeVisibleInGroup } from '@/utils/freeNodes'
 
 const expandedSet = ref<Set<string>>(new Set())
 const loadingSet = ref<Set<string>>(new Set())
@@ -35,6 +35,13 @@ const [showMoreSettings, toggleMoreSettings] = useBool(false)
 const appSettings = useAppSettingsStore()
 const kernelApiStore = useKernelApiStore()
 const profilesStore = useProfilesStore()
+const subscribesStore = useSubscribesStore()
+
+const keptFreeTags = computed(() => {
+  const sub = subscribesStore.getSubscribeById(FREE_NODE_SUB_ID)
+  if (!sub || sub.disabled) return new Set<string>()
+  return new Set(sub.proxies.map((item) => item.tag).filter(Boolean).slice(0, FREE_KEEP))
+})
 
 const groups = computed(() => {
   const { proxies } = kernelApiStore
@@ -56,6 +63,7 @@ const groups = computed(() => {
     .map((group) => {
       const all = (group.all || [])
         .filter((proxy) => {
+          if (!freeNodeVisibleInGroup(group.name, proxy, keptFreeTags.value)) return false
           const history = proxies[proxy]?.history || []
           const alive = (history[history.length - 1]?.delay ?? 0) > 0
           const condition1 =
@@ -87,6 +95,7 @@ const groups = computed(() => {
       }
       return { ...group, all, chains, icon: iconMapping[group.name] }
     })
+    .filter((group) => group.name !== FREE_NODE_GROUP || group.all.length > 0)
 })
 
 const showsFreeWarning = computed(() => groups.value.some((group) => group.name === FREE_NODE_GROUP))

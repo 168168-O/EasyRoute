@@ -208,7 +208,16 @@ const generateOutbounds = async (outbounds: App.Outbound[]) => {
   if (freeSub && !freeSub.disabled) {
     try {
       const stored = JSON.parse(await ReadFile(freeSub.path))
-      if (Array.isArray(stored)) freeNodes = stored.filter(isProxyOutbound).slice(0, FREE_KEEP)
+      if (Array.isArray(stored)) {
+        const allowed = new Set(freeSub.proxies.map((item) => item.tag))
+        const byTag = new Map(
+          stored.filter(isProxyOutbound).map((item) => [String(item.tag || ''), item]),
+        )
+        freeNodes = freeSub.proxies
+          .map((item) => byTag.get(item.tag))
+          .filter((item): item is Recordable => !!item && allowed.has(String(item.tag || '')))
+          .slice(0, FREE_KEEP)
+      }
     } catch {
       freeNodes = []
     }

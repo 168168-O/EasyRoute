@@ -11,12 +11,14 @@ import {
   FREE_PARSE_CAP,
   FREE_PROBE_CONCURRENCY,
   FREE_REFRESH_MS,
+  FREE_SLOW_MS,
   attachFreeGroup,
   collectFreeCandidates,
   decideFreeList,
   dueForFreeRefresh,
   ensureFreeSubscription,
   expandsFreeSubscription,
+  freeNodeVisibleInGroup,
   freeNodeSubscription,
   parseFreeSource,
   rankFreeNodes,
@@ -35,6 +37,7 @@ test('the free subscription is separate, off, and capped', () => {
   assert.equal(FREE_KEEP, 5)
   assert.equal(FREE_PROBE_CONCURRENCY, 2)
   assert.equal(FREE_REFRESH_MS, 12 * 60 * 60 * 1000)
+  assert.equal(FREE_SLOW_MS, 5000)
   assert.equal(FREE_NODE_SOURCES.length >= 1 && FREE_NODE_SOURCES.length <= 2, true)
   const sub = freeNodeSubscription()
   assert.equal(sub.id, FREE_NODE_SUB_ID)
@@ -101,7 +104,50 @@ test('only the five fastest working nodes are kept', () => {
   const previous = [node('free-old', 'old.example', 15).node]
   assert.deepEqual(decideFreeList(previous, []).proxies, previous)
   assert.equal(decideFreeList(previous, []).replace, false)
-  assert.equal(decideFreeList(previous, ranked).replace, true)
+  const slow = node('free-slow', 'slow.example', 8000)
+  const rankedFromProbes = rankFreeNodes([
+    ...[node('free-a', 'a.example', 80), node('free-b', 'b.example', 10)],
+    slow,
+  ])
+  assert.equal(rankedFromProbes.some((item) => item.tag === 'free-slow'), false)
+})
+
+test('a refresh drops dead and slow kept nodes and fills the slot', () => {
+  const alive = node('free-old', 'old.example', 15).node
+  const dead = node('free-dead', 'dead.example', 1, false).node
+  const replacement = node('free-new', 'new.example', 40).node
+  const slow = node('free-slow', 'slow.example', 8000).node
+  const decision = decideFreeList([alive, dead], [
+    { node: alive, ok: true, delayMs: 15 },
+    { node: dead, ok: false, delayMs: 0 },
+    { node: replacement, ok: true, delayMs: 40 },
+    { node: slow, ok: true, delayMs: 8000 },
+  ])
+  assert.equal(decision.replace, true)
+  assert.deepEqual(
+    decision.proxies.map((item) => item.tag),
+    ['free-old', 'free-new'],
+  )
+  const wiped = decideFreeList([alive, dead], [
+    { node: alive, ok: false, delayMs: 0 },
+    { node: dead, ok: false, delayMs: 0 },
+  ])
+  assert.equal(wiped.replace, true)
+  assert.deepEqual(wiped.proxies, [])
+  const skipped = decideFreeList([alive], [{ node: alive, ok: false, delayMs: 0, unavailable: true }])
+  assert.equal(skipped.replace, false)
+  assert.deepEqual(skipped.proxies, [alive])
+})
+
+test('discarded free nodes stay out of every group list', () => {
+  const kept = new Set(['free-a', 'free-b'])
+  assert.equal(freeNodeVisibleInGroup('🆓 免费备用', 'free-a', kept), true)
+  assert.equal(freeNodeVisibleInGroup('🆓 免费备用', 'free-dead', kept), false)
+  assert.equal(freeNodeVisibleInGroup('🚀 节点选择', 'free-a', kept), false)
+  assert.equal(freeNodeVisibleInGroup('🚀 节点选择', 'HK-01', kept), true)
+  assert.equal(freeNodeVisibleInGroup('🚀 节点选择', FREE_NODE_GROUP, kept), true)
+  assert.equal(freeNodeVisibleInGroup('🚀 节点选择', FREE_NODE_GROUP, new Set()), false)
+  assert.equal(freeNodeVisibleInGroup('🆓 免费备用', FREE_NODE_GROUP, kept), false)
 })
 
 test('free nodes stay out of auto, country, and fallback groups', () => {

@@ -213,9 +213,10 @@ export const useSubscribesStore = defineStore('subscribes', () => {
     if (!sub || sub.disabled || sub.updating) return
     sub.updating = true
     try {
-      await refreshFreeBackup()
+      const changed = await refreshFreeBackup()
+      if (changed) eventBus.emit('subscriptionChange', { id: FREE_NODE_SUB_ID })
     } catch {
-      // A failed source or probe keeps the previous nodes and stays quiet.
+      // A failed fetch leaves the last working nodes in place.
     } finally {
       sub.updating = false
     }

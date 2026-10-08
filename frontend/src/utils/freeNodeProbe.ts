@@ -28,9 +28,11 @@ const probeConfig = (node: SingboxOutbound, port: number) => ({
 })
 
 /** One short sing-box, no TUN and no system proxy, then it exits. */
-export const probeFreeNode = async (node: SingboxOutbound): Promise<{ ok: boolean; delayMs: number }> => {
+export const probeFreeNode = async (
+  node: SingboxOutbound,
+): Promise<{ ok: boolean; delayMs: number; unavailable?: boolean }> => {
   const binary = `${CoreWorkingDirectory}/${getKernelFileName(false)}`
-  if (!(await FileExists(binary).catch(() => false))) return { ok: false, delayMs: 0 }
+  if (!(await FileExists(binary).catch(() => false))) return { ok: false, delayMs: 0, unavailable: true }
 
   const port = takePort()
   const configPath = `${CoreWorkingDirectory}/free-probe-${port}.json`
