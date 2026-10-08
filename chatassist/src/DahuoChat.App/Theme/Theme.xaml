@@ -1,0 +1,235 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:DahuoChat">
+  <local:BoolVisConverter x:Key="BoolVis"/>
+
+  <SolidColorBrush x:Key="Ink" Color="#FFE7EEF8"/>
+  <SolidColorBrush x:Key="Ink2" Color="#FFB7C3D6"/>
+  <SolidColorBrush x:Key="Ink3" Color="#FF8E9BB0"/>
+  <SolidColorBrush x:Key="Gold" Color="#FFE9D3A0"/>
+  <SolidColorBrush x:Key="Gold2" Color="#FFD9B878"/>
+  <SolidColorBrush x:Key="Ice" Color="#FFA9DCFF"/>
+  <SolidColorBrush x:Key="Line" Color="#59E9D3A0"/>
+  <SolidColorBrush x:Key="CardLine" Color="#14FFFFFF"/>
+
+  <LinearGradientBrush x:Key="GoldText" StartPoint="0,0" EndPoint="0,1">
+    <GradientStop Color="#FFFFF6DE" Offset="0"/>
+    <GradientStop Color="#FFD9B878" Offset="1"/>
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="GoldFill" StartPoint="0,0" EndPoint="0,1">
+    <GradientStop Color="#FFF8E9C4" Offset="0"/>
+    <GradientStop Color="#FFE2C489" Offset="0.55"/>
+    <GradientStop Color="#FFC9A46A" Offset="1"/>
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="IceFill" StartPoint="0,0" EndPoint="0,1">
+    <GradientStop Color="#FFE2F4FF" Offset="0"/>
+    <GradientStop Color="#FF7CC4F2" Offset="1"/>
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="AppBg" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#FF121A28" Offset="0"/>
+    <GradientStop Color="#FF070B12" Offset="1"/>
+  </LinearGradientBrush>
+
+  <Style x:Key="GoldBtn" TargetType="Button">
+    <Setter Property="Foreground" Value="#FF2A1F0C"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Padding" Value="12,4"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="bd" CornerRadius="7" Background="{StaticResource GoldFill}" BorderBrush="#B3FFF4D6" BorderThickness="1" Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Trigger.EnterActions>
+                <BeginStoryboard>
+                  <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="Opacity" To="0.88" Duration="0:0:0.18"/>
+                  </Storyboard>
+                </BeginStoryboard>
+              </Trigger.EnterActions>
+              <Trigger.ExitActions>
+                <BeginStoryboard>
+                  <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18"/>
+                  </Storyboard>
+                </BeginStoryboard>
+              </Trigger.ExitActions>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="bd" Property="Opacity" Value="0.78"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="GhostBtn" TargetType="Button">
+    <Setter Property="Foreground" Value="{StaticResource Ink2}"/>
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Padding" Value="10,4"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="bd" CornerRadius="8" Background="#08FFFFFF" BorderBrush="#18FFFFFF" BorderThickness="1" Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Gold}"/>
+              <Setter Property="Foreground" Value="{StaticResource Gold}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="IceBtn" TargetType="Button">
+    <Setter Property="Foreground" Value="#FF06121E"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="bd" CornerRadius="9" Background="{StaticResource IceFill}" Padding="8,6">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Trigger.EnterActions>
+                <BeginStoryboard>
+                  <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="Opacity" To="0.88" Duration="0:0:0.18"/>
+                  </Storyboard>
+                </BeginStoryboard>
+              </Trigger.EnterActions>
+              <Trigger.ExitActions>
+                <BeginStoryboard>
+                  <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18"/>
+                  </Storyboard>
+                </BeginStoryboard>
+              </Trigger.ExitActions>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="ChipBtn" TargetType="Button">
+    <Setter Property="Foreground" Value="{StaticResource Ink2}"/>
+    <Setter Property="Background" Value="#14FFFFFF"/>
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Padding" Value="6,3"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="bd" CornerRadius="8" Background="{TemplateBinding Background}" BorderBrush="#28FFFFFF" BorderThickness="1" Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Gold}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="BareBtn" TargetType="Button">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Foreground" Value="{StaticResource Ink2}"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style TargetType="ComboBox">
+    <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+    <Setter Property="Background" Value="#FF101722"/>
+    <Setter Property="BorderBrush" Value="#59E9D3A0"/>
+    <Setter Property="Padding" Value="8,4"/>
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ComboBox">
+          <Grid>
+            <ToggleButton Focusable="False" ClickMode="Press" IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+              <ToggleButton.Template>
+                <ControlTemplate TargetType="ToggleButton">
+                  <Border Background="#FF101722" BorderBrush="#59E9D3A0" BorderThickness="1" CornerRadius="8" Padding="8,4">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Right" Text="▾" Foreground="{StaticResource Gold}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                      <TextBlock Text="{Binding SelectedItem.Content, RelativeSource={RelativeSource AncestorType=ComboBox}}" Foreground="{StaticResource Ink}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                  </Border>
+                </ControlTemplate>
+              </ToggleButton.Template>
+            </ToggleButton>
+            <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" PopupAnimation="Fade">
+              <Border Background="#FF1A2232" BorderBrush="#59E9D3A0" BorderThickness="1" CornerRadius="8" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0">
+                <ScrollViewer MaxHeight="220">
+                  <ItemsPresenter/>
+                </ScrollViewer>
+              </Border>
+            </Popup>
+          </Grid>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style TargetType="ComboBoxItem">
+    <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+    <Setter Property="Padding" Value="8,5"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ComboBoxItem">
+          <Border x:Name="bd" Background="Transparent" Padding="{TemplateBinding Padding}">
+            <ContentPresenter/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+              <Setter TargetName="bd" Property="Background" Value="#33E9D3A0"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style TargetType="PasswordBox">
+    <Setter Property="Background" Value="#4C000000"/>
+    <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+    <Setter Property="BorderBrush" Value="#59A9DCFF"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="8,4"/>
+    <Setter Property="CaretBrush" Value="{StaticResource Ice}"/>
+  </Style>
+
+  <Style TargetType="TextBox">
+    <Setter Property="Background" Value="#4C000000"/>
+    <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+    <Setter Property="BorderBrush" Value="#59A9DCFF"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CaretBrush" Value="{StaticResource Ice}"/>
+    <Setter Property="Padding" Value="8,4"/>
+    <Setter Property="FontSize" Value="13"/>
+  </Style>
+</ResourceDictionary>

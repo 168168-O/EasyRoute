@@ -1,0 +1,239 @@
+<UserControl x:Class="DahuoChat.ReplyPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             UseLayoutRounding="True" SnapsToDevicePixels="True">
+  <Border CornerRadius="14" BorderBrush="#52E9D3A0" BorderThickness="1" ClipToBounds="True">
+    <Border.Background>
+      <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#F01A2232" Offset="0"/>
+        <GradientStop Color="#F7090D15" Offset="1"/>
+      </LinearGradientBrush>
+    </Border.Background>
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="46"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+      <Ellipse Width="220" Height="120" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-30,-20,0" IsHitTestVisible="False" Grid.RowSpan="2">
+        <Ellipse.Fill>
+          <RadialGradientBrush>
+            <GradientStop Color="#2BE9D3A0" Offset="0"/>
+            <GradientStop Color="#00E9D3A0" Offset="1"/>
+          </RadialGradientBrush>
+        </Ellipse.Fill>
+      </Ellipse>
+      <DockPanel Margin="12,0">
+        <Border Width="26" Height="26" CornerRadius="7" Background="{StaticResource GoldFill}" DockPanel.Dock="Left" Margin="0,0,8,0">
+          <TextBlock Text="达" Foreground="#FF2A1F0C" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13"/>
+        </Border>
+        <Button DockPanel.Dock="Right" Style="{StaticResource GhostBtn}" Padding="6,2" Margin="4,0,0,0" Click="Collapse_Click" ToolTip="收起面板">»</Button>
+        <Button DockPanel.Dock="Right" Style="{StaticResource GhostBtn}" Padding="6,2" Click="Drawer_Click" ToolTip="话术">话术</Button>
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="高情商回复" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource GoldText}"/>
+          <StackPanel Orientation="Horizontal">
+            <Ellipse Width="7" Height="7" Fill="#FF5FE0A0" Margin="0,0,5,0"/>
+            <TextBlock Text="自动 · 新消息一来就出建议" Foreground="#FF9FE3C0" FontSize="11" VerticalAlignment="Center"/>
+          </StackPanel>
+        </StackPanel>
+      </DockPanel>
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="12,0,12,8">
+        <StackPanel>
+          <UniformGrid Columns="2" Margin="0,0,0,8">
+            <Button Content="回复建议" Click="ModeSuggest_Click" Margin="0,0,3,0" Height="28">
+              <Button.Style>
+                <Style TargetType="Button" BasedOn="{StaticResource ChipBtn}">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding SuggestMode}" Value="True">
+                      <Setter Property="Background" Value="{StaticResource GoldFill}"/>
+                      <Setter Property="Foreground" Value="#FF2A1F0C"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Button.Style>
+            </Button>
+            <Button Content="润色我的话" Click="ModePolish_Click" Margin="3,0,0,0" Height="28">
+              <Button.Style>
+                <Style TargetType="Button" BasedOn="{StaticResource ChipBtn}">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding PolishMode}" Value="True">
+                      <Setter Property="Background" Value="{StaticResource IceFill}"/>
+                      <Setter Property="Foreground" Value="#FF06121E"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Button.Style>
+            </Button>
+          </UniformGrid>
+          <Border CornerRadius="12" BorderBrush="#3DA9DCFF" BorderThickness="1" Padding="10,8" Margin="0,0,0,8">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#216FB8F0" Offset="0"/>
+                <GradientStop Color="#086FB8F0" Offset="1"/>
+              </LinearGradientBrush>
+            </Border.Background>
+            <StackPanel>
+              <DockPanel>
+                <Border Width="24" Height="24" CornerRadius="7" Background="#FF3D6FA8" DockPanel.Dock="Left" Margin="0,0,7,0">
+                  <TextBlock Text="{Binding Initial}" Foreground="White" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <Border DockPanel.Dock="Right" CornerRadius="10" BorderBrush="#48A9DCFF" BorderThickness="1" Background="#1E6FB8F0" Padding="8,2">
+                  <TextBlock Text="{Binding Emotion}" Foreground="{StaticResource Ice}" FontSize="11"/>
+                </Border>
+                <TextBlock Text="{Binding ContactLine}" Foreground="{StaticResource Ink}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              </DockPanel>
+              <TextBlock Text="{Binding Quote}" TextWrapping="Wrap" Foreground="#FFF3F7FD" FontSize="13" Margin="0,6,0,0"/>
+            </StackPanel>
+          </Border>
+          <DockPanel Margin="0,0,0,4">
+            <TextBlock Text="语气" Foreground="{StaticResource Ink3}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <UniformGrid Columns="4">
+              <Button Content="温暖" Tag="温暖" Click="Tone_Click" Margin="1" Height="26">
+                <Button.Style>
+                  <Style TargetType="Button" BasedOn="{StaticResource ChipBtn}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Tone}" Value="温暖">
+                        <Setter Property="Background" Value="{StaticResource GoldFill}"/>
+                        <Setter Property="Foreground" Value="#FF2A1F0C"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Button.Style>
+              </Button>
+              <Button Content="谦和" Tag="谦和" Click="Tone_Click" Margin="1" Height="26">
+                <Button.Style>
+                  <Style TargetType="Button" BasedOn="{StaticResource ChipBtn}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Tone}" Value="谦和">
+                        <Setter Property="Background" Value="{StaticResource GoldFill}"/>
+                        <Setter Property="Foreground" Value="#FF2A1F0C"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Button.Style>
+              </Button>
+              <Button Content="幽默" Tag="幽默" Click="Tone_Click" Margin="1" Height="26">
+                <Button.Style>
+                  <Style TargetType="Button" BasedOn="{StaticResource ChipBtn}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Tone}" Value="幽默">
+                        <Setter Property="Background" Value="{StaticResource GoldFill}"/>
+                        <Setter Property="Foreground" Value="#FF2A1F0C"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Button.Style>
+              </Button>
+              <Button Content="正式" Tag="正式" Click="Tone_Click" Margin="1" Height="26">
+                <Button.Style>
+                  <Style TargetType="Button" BasedOn="{StaticResource ChipBtn}">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Tone}" Value="正式">
+                        <Setter Property="Background" Value="{StaticResource GoldFill}"/>
+                        <Setter Property="Foreground" Value="#FF2A1F0C"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Button.Style>
+              </Button>
+            </UniformGrid>
+          </DockPanel>
+          <TextBlock Text="{Binding MemoryLine}" Foreground="{StaticResource Gold2}" FontSize="11" Margin="0,0,0,8"/>
+          <Border CornerRadius="10" BorderBrush="#4DE9D3A0" BorderThickness="1" Background="#24E9D3A0" Padding="8,4" Margin="0,0,0,8" Visibility="{Binding PolishMode, Converter={StaticResource BoolVis}, ConverterParameter=inv}">
+            <DockPanel>
+              <TextBlock Text="我想表达" Foreground="{StaticResource Gold2}" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <Button DockPanel.Dock="Right" Content="话术" Style="{StaticResource GhostBtn}" Click="Drawer_Click" Padding="8,2"/>
+              <TextBox Text="{Binding Goal, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" BorderThickness="0" Foreground="{StaticResource Gold}" Padding="0"/>
+            </DockPanel>
+          </Border>
+          <Border CornerRadius="12" BorderBrush="#38A9DCFF" BorderThickness="1" Padding="10" Margin="0,0,0,8" Visibility="{Binding PolishMode, Converter={StaticResource BoolVis}}">
+            <StackPanel>
+              <TextBlock Text="我自己写的    Win + H 说话打字" Foreground="{StaticResource Ice}" FontSize="12" Margin="0,0,0,6"/>
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Content="说好听" Style="{StaticResource IceBtn}" Width="72" Height="40" Margin="8,0,0,0" Click="Polish_Click"/>
+                <TextBox Text="{Binding Draft, UpdateSourceTrigger=PropertyChanged}" MinHeight="40" TextWrapping="Wrap" AcceptsReturn="True"/>
+              </DockPanel>
+            </StackPanel>
+          </Border>
+          <Border CornerRadius="12" BorderBrush="#52E9D3A0" BorderThickness="1" Padding="12" Margin="0,0,0,8" Visibility="{Binding NoKey, Converter={StaticResource BoolVis}}">
+            <StackPanel>
+              <TextBlock Text="还没接上 AI" Foreground="{StaticResource Gold}" FontSize="15" FontWeight="SemiBold"/>
+              <TextBlock TextWrapping="Wrap" Margin="0,6,0,8" Foreground="{StaticResource Ink2}" FontSize="13"
+                         Text="填一下你自己的钥匙（推荐 DeepSeek），对方一发消息，这里就会出几条好听的回法。钥匙只锁在这台电脑上，聊天内容不留截图。"/>
+              <Button Content="去设置里填写" Style="{StaticResource GoldBtn}" HorizontalAlignment="Left" Click="OpenSettings_Click"/>
+            </StackPanel>
+          </Border>
+          <ItemsControl ItemsSource="{Binding VisibleReplies}" Visibility="{Binding NoKey, Converter={StaticResource BoolVis}, ConverterParameter=inv}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border CornerRadius="12" Padding="10,8" Margin="0,0,0,8" BorderThickness="1">
+                  <Border.Style>
+                    <Style TargetType="Border">
+                      <Setter Property="BorderBrush" Value="#14FFFFFF"/>
+                      <Setter Property="Background" Value="#0EFFFFFF"/>
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding Best}" Value="True">
+                          <Setter Property="BorderBrush" Value="#99E9D3A0"/>
+                          <Setter Property="Background" Value="#26E9D3A0"/>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <StackPanel>
+                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Gold}" Text="★ 最推荐" Margin="0,0,0,4">
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Visibility" Value="Collapsed"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding Best}" Value="True">
+                              <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                    <Border Background="{Binding TagBg}" CornerRadius="6" HorizontalAlignment="Left" Padding="7,1" Margin="0,0,0,4">
+                      <TextBlock Text="{Binding Tag}" Foreground="{Binding TagFg}" FontSize="11" FontWeight="SemiBold"/>
+                    </Border>
+                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="13" Foreground="#FFF1F4FA" LineHeight="21"/>
+                    <DockPanel Margin="0,6,0,0">
+                      <Button DockPanel.Dock="Right" Content="填入" Style="{StaticResource GoldBtn}" Margin="6,0,0,0" Tag="{Binding Index}" Click="Fill_Click"/>
+                      <Button DockPanel.Dock="Right" Content="复制" Style="{StaticResource GhostBtn}" Padding="8,4" Tag="{Binding Index}" Click="Copy_Click" ToolTip="{Binding Hotkey}"/>
+                      <TextBlock Text="{Binding Why}" Foreground="#9EC8D8EC" FontSize="11" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <DockPanel Margin="0,0,0,8" Visibility="{Binding ShowReplyTools, Converter={StaticResource BoolVis}}">
+            <Button Content="{Binding MoreLabel}" Style="{StaticResource GhostBtn}" Click="Expand_Click" Visibility="{Binding HasMore, Converter={StaticResource BoolVis}}"/>
+            <Button Content="换一批" Style="{StaticResource GhostBtn}" Margin="6,0,0,0" Click="Batch_Click" Foreground="{StaticResource Gold}"/>
+            <Button Content="更温暖" Style="{StaticResource GhostBtn}" Margin="6,0,0,0" Click="Warmer_Click"/>
+            <Button Content="更简短" Style="{StaticResource GhostBtn}" Margin="6,0,0,0" Click="Shorter_Click"/>
+          </DockPanel>
+          <Border CornerRadius="12" BorderBrush="#4DE9D3A0" BorderThickness="1" Background="#CC101820" Padding="8" Margin="0,0,0,8" Visibility="{Binding DrawerOpen, Converter={StaticResource BoolVis}}">
+            <StackPanel>
+              <TextBlock Text="话术要点" Foreground="{StaticResource Gold}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+              <ItemsControl ItemsSource="{Binding VisibleScripts}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Button HorizontalContentAlignment="Left" Margin="0,2" Click="UseScript_Click" Tag="{Binding Id}" Style="{StaticResource GhostBtn}">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Title}" Foreground="{StaticResource Ink}"/>
+                        <TextBlock Text="{Binding Points}" Foreground="{StaticResource Ink3}" FontSize="11" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+      <Border Grid.Row="2" BorderBrush="#29E9D3A0" BorderThickness="0,1,0,0" Background="#8C06090F" Padding="12,6">
+        <TextBlock Text="{Binding Status}" Foreground="{StaticResource Ink3}" FontSize="11"/>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>
