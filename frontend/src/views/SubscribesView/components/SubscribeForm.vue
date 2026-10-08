@@ -13,6 +13,7 @@ import { RequestProxyMode } from '@/enums/app'
 import { useBool } from '@/hooks'
 import { useAppSettingsStore, useSubscribesStore } from '@/stores'
 import { deepClone, GetRequestProxy, message } from '@/utils'
+import { FREE_NODE_SUB_ID, FREE_NODE_WARNING, freeNodeSources } from '@/utils/freeNodes'
 
 import Button from '@/components/Button/index.vue'
 
@@ -31,6 +32,18 @@ const loading = ref(false)
 const proxyTesting = ref(false)
 const sub = ref<App.Subscription>(subscribeStore.getSubscribeTemplate())
 
+const isFree = computed(() => sub.value.id === FREE_NODE_SUB_ID)
+const freeUrls = computed({
+  get: () => freeNodeSources(sub.value).join('\n'),
+  set: (value: string) => {
+    const urls = value
+      .split(/\n/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+    sub.value.urls = urls
+    sub.value.url = urls.join('\n')
+  },
+})
 const isManual = computed(() => sub.value.type === 'Manual')
 const isRemote = computed(() => sub.value.type === 'Http')
 const isCustomProxy = computed(() => sub.value.requestProxyMode === RequestProxyMode.Custom)
@@ -138,7 +151,14 @@ defineExpose({ modalSlots })
         <Input v-model="sub.name" autofocus class="w-full" />
       </div>
     </div>
-    <div v-if="!isManual" class="form-item">
+    <div v-if="isFree" class="form-item">
+      <div class="sub-warn">{{ FREE_NODE_WARNING }}</div>
+      免费节点地址，一行一个
+      <div class="min-w-[75%]">
+        <textarea v-model="freeUrls" class="free-urls" spellcheck="false" />
+      </div>
+    </div>
+    <div v-else-if="!isManual" class="form-item">
       {{ t(sub.type === 'Http' ? 'subscribe.url' : 'subscribe.localPath') }} *
       <div class="min-w-[75%]">
         <Input
@@ -262,3 +282,17 @@ defineExpose({ modalSlots })
     </div>
   </div>
 </template>
+
+<style scoped>
+.free-urls {
+  width: 100%;
+  min-height: 72px;
+  box-sizing: border-box;
+  border: 1px solid #2e6f9a;
+  border-radius: 8px;
+  background: #071018;
+  color: #fff;
+  font-size: 12px;
+  padding: 8px;
+}
+</style>

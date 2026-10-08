@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 
 import { useSubscribesStore } from '@/stores'
 import { formatBytes } from '@/utils'
+import { FREE_NODE_SUB_ID } from '@/utils/freeNodes'
 import { subscriptionHealth, type SubscriptionHealth } from '@/utils/subscriptionStatus'
 
 const { t } = useI18n()
@@ -11,6 +12,7 @@ const store = useSubscribesStore()
 
 const rows = computed(() =>
   (store.subscribes || [])
+    .filter((sub) => sub.id !== FREE_NODE_SUB_ID)
     .map((sub) => subscriptionHealth(sub))
     .filter((row): row is SubscriptionHealth => row != null),
 )

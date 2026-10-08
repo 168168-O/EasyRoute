@@ -1,3 +1,7 @@
+import { FREE_NODE_GROUP, FREE_TAG_PREFIX } from './freeNodes.ts'
+
+const isFreeTag = (tag: string) => tag === FREE_NODE_GROUP || tag.startsWith(FREE_TAG_PREFIX)
+
 export interface CountryGroup {
   id: string
   tag: string
@@ -51,7 +55,7 @@ export const buildCountryUrltests = (
   const buckets = new Map<string, string[]>()
   for (const tag of tags) {
     const name = tag.trim()
-    if (!name || countryGroupTags.has(name)) continue
+    if (!name || countryGroupTags.has(name) || isFreeTag(name)) continue
     const id = classifyNode(name)
     const list = buckets.get(id) || []
     if (!list.includes(name)) list.push(name)
@@ -95,8 +99,8 @@ export const attachCountryGroups = <T extends GeneratedOutbound>(outbounds: T[],
     (item) => item.type === 'urltest' && select.outbounds?.includes(String(item.tag || '')),
   )
   const leaves = [
-    ...select.outbounds.filter((tag) => tag && !groupTags.has(tag) && tag !== 'direct' && tag !== 'block'),
-    ...((nested?.outbounds || []).filter((tag) => tag && !groupTags.has(tag))),
+    ...select.outbounds.filter((tag) => tag && !groupTags.has(tag) && tag !== 'direct' && tag !== 'block' && !isFreeTag(tag)),
+    ...((nested?.outbounds || []).filter((tag) => tag && !groupTags.has(tag) && !isFreeTag(tag))),
   ]
   const groups = buildCountryUrltests(leaves, { url: testUrl || undefined, interval: '10m' })
   if (!groups.length) return outbounds.filter((item) => !countryGroupTags.has(String(item.tag || ''))) as T[]

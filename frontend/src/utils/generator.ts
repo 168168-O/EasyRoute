@@ -22,6 +22,7 @@ import {
 } from '@/stores'
 import { applyAppRouting, type RoutedProgram } from '@/utils/appRouting'
 import { attachCountryGroups } from '@/utils/countryGroups'
+import { FREE_KEEP, FREE_NODE_SUB_ID, attachFreeGroup, expandsFreeSubscription, parseFreeSource } from '@/utils/freeNodes'
 import { deepAssign, deepClone, APP_TITLE, createTextMatcher } from '@/utils'
 
 const _generateRule = (
@@ -172,6 +173,7 @@ const generateOutbounds = async (outbounds: App.Outbound[]) => {
           _outbound.outbounds.push(proxy.tag)
         } else {
           const subId = proxy.type === 'Subscription' ? proxy.id : proxy.type
+          if (expandsFreeSubscription(subId)) continue
           if (!SubscriptionCache[subId]) {
             const sub = subscribesStore.getSubscribeById(subId)
             if (sub) {
@@ -201,7 +203,23 @@ const generateOutbounds = async (outbounds: App.Outbound[]) => {
   result.push(...proxiesSet)
   result.push(...Array.from(builtInProxiesSet).map((v) => ({ type: v, tag: v })))
 
-  return attachCountryGroups(result, DefaultTestURL)
+  const freeSub = subscribesStore.getSubscribeById(FREE_NODE_SUB_ID)
+  let freeNodes: Recordable[] = []
+  if (freeSub && !freeSub.disabled) {
+    try {
+      const stored = parseFreeSource(await ReadFile(freeSub.path))
+      const allowed = new Set(freeSub.proxies.map((item) => item.tag))
+      const byTag = new Map(stored.map((item) => [String(item.tag || ''), item]))
+      freeNodes = freeSub.proxies.flatMap((item) => {
+        const node = byTag.get(item.tag)
+        if (!node || !allowed.has(String(node.tag || ''))) return []
+        return [node]
+      }).slice(0, FREE_KEEP)
+    } catch {
+      freeNodes = []
+    }
+  }
+  return attachFreeGroup(attachCountryGroups(result, DefaultTestURL), freeNodes)
 }
 
 const generateRoute = (

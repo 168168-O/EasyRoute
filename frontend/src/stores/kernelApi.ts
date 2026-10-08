@@ -33,6 +33,7 @@ import {
   useSubscribesStore,
   useRulesetsStore,
 } from '@/stores'
+import { FREE_NODE_SUB_ID } from '@/utils/freeNodes'
 import {
   generateConfigFile,
   updateTrayAndMenus,
@@ -491,6 +492,10 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
   })
 
   eventBus.on('subscriptionChange', ({ id }) => {
+    if (running.value && id === FREE_NODE_SUB_ID) {
+      needRestart.value = true
+      return
+    }
     if (running.value && profilesStore.currentProfile) {
       const inUse = profilesStore.currentProfile.outbounds.some(({ outbounds }) =>
         outbounds.some((outbound) => outbound.type === 'Subscription' && outbound.id === id),
