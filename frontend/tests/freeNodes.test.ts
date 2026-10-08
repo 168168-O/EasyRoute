@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { applyAppRouting, sampleBaseConfig } from '../src/utils/appRouting.ts'
+import { buildCountryUrltests } from '../src/utils/countryGroups.ts'
 import {
   FREE_KEEP,
   FREE_NODE_GROUP,
@@ -14,6 +15,7 @@ import {
   FREE_SLOW_MS,
   attachFreeGroup,
   collectFreeCandidates,
+  isAutomaticGroup,
   decideFreeList,
   dueForFreeRefresh,
   ensureFreeSubscription,
@@ -308,6 +310,8 @@ test('free nodes stay out of auto, country, and fallback groups', () => {
   const free = outbounds.find((item) => item.tag === FREE_NODE_GROUP)
   const tags = nodes.map((item) => item.tag)
   assert.equal(free?.type, 'selector')
+  assert.equal(free?.url, undefined)
+  assert.equal(free?.interval, undefined)
   assert.deepEqual(free?.outbounds, tags)
   assert.equal(select?.outbounds?.includes(FREE_NODE_GROUP), true)
   for (const tag of tags) {
@@ -322,6 +326,58 @@ test('free nodes stay out of auto, country, and fallback groups', () => {
   assert.equal(fallback?.outbounds?.includes(FREE_NODE_GROUP), false)
   assert.equal(global?.outbounds?.includes(FREE_NODE_GROUP), false)
   assert.equal(outbounds.filter((item) => item.tag === FREE_NODE_GROUP).length, 1)
+  assert.equal(select?.outbounds?.[0], '🎈 自动选择')
+  assert.equal(select?.outbounds?.at(-1), FREE_NODE_GROUP)
+})
+
+test('free nodes never join a urltest or fallback and are not the default', () => {
+  const nodes = rankFreeNodes([node('香港 1', 'hk.example', 20)])
+  const tags = nodes.map((item) => item.tag)
+  const outbounds = attachFreeGroup(
+    [
+      {
+        type: 'selector',
+        tag: '🚀 节点选择',
+        default: FREE_NODE_GROUP,
+        outbounds: ['🎈 自动选择', 'direct'],
+      },
+      {
+        type: 'urltest',
+        tag: '🎈 自动选择',
+        outbounds: ['paid', ...tags, FREE_NODE_GROUP],
+        url: 'https://www.gstatic.com/generate_204',
+        interval: '3m',
+      },
+      {
+        type: 'urltest',
+        tag: '🚀 节点选择-测速',
+        outbounds: ['🎈 自动选择', FREE_NODE_GROUP],
+        url: 'https://www.gstatic.com/generate_204',
+        interval: '3m',
+      },
+      { type: 'fallback', tag: '🐟 漏网之鱼', outbounds: ['🚀 节点选择', FREE_NODE_GROUP, ...tags] },
+      { type: 'loadbalance', tag: 'loadbalance', outbounds: [FREE_NODE_GROUP, ...tags] },
+      { type: 'trojan', tag: 'paid', server: 'paid.example', server_port: 443 },
+    ],
+    nodes,
+  )
+  const select = outbounds.find((item) => item.type === 'selector' && item.tag === '🚀 节点选择')
+  assert.equal(select?.default, '🎈 自动选择')
+  assert.equal(select?.outbounds?.at(-1), FREE_NODE_GROUP)
+  const free = outbounds.find((item) => item.tag === FREE_NODE_GROUP)
+  assert.equal(free?.type, 'selector')
+  assert.equal(free?.url, undefined)
+  assert.equal(free?.interval, undefined)
+  for (const item of outbounds) {
+    if (!isAutomaticGroup(item)) continue
+    assert.equal(item.outbounds?.includes(FREE_NODE_GROUP), false)
+    for (const tag of tags) assert.equal(item.outbounds?.includes(tag), false)
+  }
+  const regions = buildCountryUrltests(['free-香港 1', FREE_NODE_GROUP, 'HK-01'])
+  const regionText = JSON.stringify(regions)
+  assert.equal(regionText.includes('free-'), false)
+  assert.equal(regionText.includes(FREE_NODE_GROUP), false)
+  assert.equal(regions.some((group) => group.outbounds.includes('HK-01')), true)
 })
 
 test('vmess and shadowsocks share links become outbounds and rules do not', () => {

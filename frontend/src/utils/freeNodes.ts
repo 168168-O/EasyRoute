@@ -202,13 +202,29 @@ interface GeneratedOutbound {
   type?: string
   tag?: string
   outbounds?: string[]
+  default?: string
   [key: string]: unknown
 }
 
+const AUTOMATIC_GROUP = /自动选择|漏网之鱼|urltest|fallback|loadbalance/i
+
+/** URLTest, fallback, and load-balance pick a member by themselves. */
+export const isAutomaticGroup = (item: { type?: string; tag?: string }) => {
+  const type = String(item.type || '').toLowerCase()
+  if (type === 'urltest' || type === 'fallback' || type === 'loadbalance') return true
+  return AUTOMATIC_GROUP.test(String(item.tag || ''))
+}
+
+/** Only the manual 节点选择 selector may offer the free group, and never as its default. */
+const isManualNodeSelect = (item: { type?: string; tag?: string }) =>
+  String(item.type || '').toLowerCase() === 'selector' &&
+  String(item.tag || '').includes('节点选择') &&
+  !isAutomaticGroup(item)
+
 /**
  * The five nodes live only in their own selector.
- * That selector is one manual choice on 节点选择. It is not a member of 自动选择,
- * country urltests, or 漏网之鱼, and it does not urltest by itself.
+ * That selector is one manual entry on 节点选择. It is never a member of a
+ * URLTest, fallback, or load-balance group, and it does not test or fail over by itself.
  */
 export const attachFreeGroup = <T extends GeneratedOutbound>(outbounds: T[], nodes: Array<{ tag?: string }>): T[] => {
   const tags = nodes.map((node) => String(node.tag || '')).filter(Boolean).slice(0, FREE_KEEP)
@@ -218,12 +234,15 @@ export const attachFreeGroup = <T extends GeneratedOutbound>(outbounds: T[], nod
     .map((item) => {
       if (!Array.isArray(item.outbounds)) return { ...item }
       const kept = item.outbounds.filter((tag) => !banned.has(tag))
-      const manualOption =
-        item.type === 'selector' && String(item.tag || '').includes('节点选择') && tags.length > 0
-      return {
-        ...item,
-        outbounds: manualOption ? [...kept, FREE_NODE_GROUP] : kept,
+      const manualOption = isManualNodeSelect(item) && tags.length > 0
+      const listed = manualOption ? [...kept, FREE_NODE_GROUP] : kept
+      const currentDefault = String(item.default || '')
+      const safeDefault = currentDefault && !banned.has(currentDefault) ? currentDefault : listed[0] || ''
+      const copy = { ...item, outbounds: listed }
+      if (currentDefault && banned.has(currentDefault)) {
+        copy.default = safeDefault || undefined
       }
+      return copy
     })
   if (!tags.length) return next
   return [
