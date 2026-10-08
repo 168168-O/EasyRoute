@@ -253,8 +253,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       const value = scale || 'standard'
       if (value === 'standard') delete document.documentElement.dataset.font
       else document.documentElement.dataset.font = value
-      const zoom = { small: '0.92', standard: '1.08', large: '1.18', xlarge: '1.32' }[value]
-      document.documentElement.style.setProperty('--font-scale', zoom)
+      document.documentElement.style.setProperty('--font-scale', '1')
     },
     feature(
       outline: boolean,

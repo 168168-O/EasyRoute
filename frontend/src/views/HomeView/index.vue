@@ -147,7 +147,7 @@ watch(showController, (v) => {
     </div>
 
     <template v-else-if="!kernelApiStore.coreStateLoading">
-      <div :class="{ 'blur-3xl': showController }">
+      <div>
         <OverView />
         <Divider class="controller-trigger">
           <Button type="link" size="small" @click="showController = true">
