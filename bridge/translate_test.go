@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -383,13 +384,226 @@ func TestTranslateWorstCaseStaysUnderBudget(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected a failure when every engine hangs")
 	}
-	if elapsed > 9*time.Second {
+	// Google (4s) and Bing (6s) run together, then MyMemory gets 4s.
+	if elapsed > 12*time.Second {
 		t.Fatalf("worst case took %s", elapsed)
 	}
-	if elapsed < 7*time.Second {
-		t.Fatalf("chain returned in %s, before the 8s budget", elapsed)
+	if elapsed < 9*time.Second {
+		t.Fatalf("chain returned in %s, before Bing and MyMemory timed out", elapsed)
 	}
 	if directGoogle.Load() != 0 {
 		t.Fatal("a hanging google direct attempt was started")
+	}
+}
+
+func TestGoogleAndBingRunTogetherAndSkipMyMemory(t *testing.T) {
+	var googleStart, bingStart atomic.Int64
+	var memoryHits atomic.Int32
+	directSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/mymemory") {
+			memoryHits.Add(1)
+			http.Error(w, "should not run", http.StatusBadGateway)
+			return
+		}
+		if strings.HasSuffix(r.URL.Path, "/translator") {
+			if bingStart.CompareAndSwap(0, time.Now().UnixNano()) {
+				time.Sleep(80 * time.Millisecond)
+			}
+			_, _ = io.WriteString(w, bingPageHTML)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `[{"detectedLanguage":{"language":"en"},"translations":[{"text":"哈哈","to":"zh-Hans"}]}]`)
+	}))
+	defer directSrv.Close()
+
+	core := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		googleStart.Store(time.Now().UnixNano())
+		time.Sleep(80 * time.Millisecond)
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(`[[["大笑","lol",null,null,1]],null,"en"]`)),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	}), Timeout: 2 * time.Second}
+
+	engine := newTranslateEngine(directSrv.Client(), nil)
+	engine.core = core
+	engine.bingPages = []string{directSrv.URL + "/translator"}
+	engine.googleURL = "https://clients5.google.com/translate_a/single"
+	engine.myMemoryURL = directSrv.URL + "/mymemory"
+
+	bundle, err := engine.TranslateAll("lol", "auto", aiSettings{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bundle.Results) != 2 || bundle.Results[0].Provider != "google" || bundle.Results[1].Provider != "bing" {
+		t.Fatalf("bundle = %+v", bundle.Results)
+	}
+	if bundle.Results[0].Text != "大笑" || bundle.Results[1].Text != "哈哈" {
+		t.Fatalf("texts = %+v", bundle.Results)
+	}
+	if memoryHits.Load() != 0 {
+		t.Fatal("MyMemory ran even though Google and Bing answered")
+	}
+	if googleStart.Load() == 0 || bingStart.Load() == 0 {
+		t.Fatal("one of the engines never started")
+	}
+	gap := googleStart.Load() - bingStart.Load()
+	if gap < 0 {
+		gap = -gap
+	}
+	if gap > int64(500*time.Millisecond) {
+		t.Fatalf("engines did not overlap, gap %s", time.Duration(gap))
+	}
+}
+
+func TestAIResultComesFirstAndDomesticStaysDirect(t *testing.T) {
+	var directHits, proxyHits atomic.Int32
+	direct := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		directHits.Add(1)
+		if req.URL.Host != "api.deepseek.com" {
+			return nil, errors.New("not the model")
+		}
+		if req.Header.Get("Authorization") != "Bearer sk-domestic" {
+			t.Errorf("auth header changed")
+		}
+		if strings.Contains(req.Header.Get("Authorization"), "sk-domestic") && strings.Contains(req.URL.String(), "sk-domestic") {
+			t.Error("key was placed in the URL")
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(`{"choices":[{"message":{"content":"哈哈"}}]}`)),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	}), Timeout: 2 * time.Second}
+	proxy := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		proxyHits.Add(1)
+		if strings.Contains(req.URL.Host, "deepseek") || strings.Contains(req.URL.Host, "aliyuncs") || strings.Contains(req.URL.Host, "moonshot") || strings.Contains(req.URL.Host, "bigmodel") {
+			t.Errorf("domestic model used the proxy: %s", req.URL.Host)
+		}
+		return &http.Response{
+			StatusCode: http.StatusBadGateway,
+			Body:       io.NopCloser(strings.NewReader("google skipped")),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	}), Timeout: 2 * time.Second}
+
+	engine := newTranslateEngine(direct, proxy)
+	engine.core = nil
+	engine.bingPages = []string{"http://127.0.0.1:1/translator"}
+	engine.googleURL = "https://clients5.google.com/translate_a/single"
+	engine.myMemoryURL = "http://127.0.0.1:1/mymemory"
+	engine.direct = direct
+
+	bundle, err := engine.TranslateAll("lol", "auto", aiSettings{
+		Provider: "openai",
+		BaseURL:  "https://api.deepseek.com/v1",
+		APIKey:   "sk-domestic",
+		Model:    "deepseek-chat",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bundle.Results) == 0 || bundle.Results[0].Provider != "openai" || bundle.Results[0].Text != "哈哈" || bundle.Results[0].Label != "deepseek-chat" {
+		t.Fatalf("bundle = %+v", bundle)
+	}
+	if directHits.Load() == 0 {
+		t.Fatal("domestic model was not dialed directly")
+	}
+}
+
+func TestForeignAIUsesProxyAndHidesTheKey(t *testing.T) {
+	var directHits atomic.Int32
+	direct := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		directHits.Add(1)
+		return nil, errors.New("direct dial")
+	}), Timeout: 2 * time.Second}
+	core := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if !strings.Contains(req.URL.Host, "api.openai.com") {
+			t.Errorf("host = %s", req.URL.Host)
+		}
+		if strings.Contains(req.URL.String(), "sk-foreign") {
+			t.Error("key leaked into the URL")
+		}
+		return &http.Response{
+			StatusCode: http.StatusUnauthorized,
+			Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"bad key sk-foreign"}}`)),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	}), Timeout: 2 * time.Second}
+	engine := newTranslateEngine(direct, nil)
+	engine.core = core
+	_, err := engine.translateAI(context.Background(), aiSettings{
+		Provider: "openai",
+		BaseURL:  "https://api.openai.com/v1",
+		APIKey:   "sk-foreign",
+		Model:    "gpt-4o-mini",
+	}, "lol", "", "zh-Hans")
+	if err == nil || strings.Contains(err.Error(), "sk-foreign") {
+		t.Fatalf("err = %v", err)
+	}
+	if directHits.Load() != 0 {
+		t.Fatal("foreign model was dialed directly")
+	}
+}
+
+func TestForeignAIWithoutProxyDoesNotDial(t *testing.T) {
+	var hits atomic.Int32
+	direct := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		hits.Add(1)
+		return nil, errors.New("dialed")
+	})}
+	engine := newTranslateEngine(direct, nil)
+	_, err := engine.translateAI(context.Background(), aiSettings{
+		Provider: "deepl",
+		DeepLKey: "free-key:fx",
+	}, "lol", "", "zh-Hans")
+	if err == nil || !strings.Contains(err.Error(), "代理") {
+		t.Fatalf("err = %v", err)
+	}
+	if hits.Load() != 0 {
+		t.Fatal("DeepL was dialed without a proxy")
+	}
+	if !strings.Contains(deeplEndpoint("free-key:fx"), "api-free.deepl.com") {
+		t.Fatal("free key did not use the free endpoint")
+	}
+	if strings.Contains(deeplEndpoint("pro-key"), "api-free") {
+		t.Fatal("pro key used the free endpoint")
+	}
+}
+
+func TestBingPageTokenTTL(t *testing.T) {
+	html := `<script>var params_AbusePreventionHelper = [1000,"tok",3600000];</script><script>IG:"AABBCCDDEEFF00112233445566778899"</script><div data-iid="translator.5023"></div>`
+	creds, err := parseBingPage(html, "https://www.bing.com/translator")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := time.UnixMilli(1000).Add(3600*time.Second - 30*time.Second)
+	if !creds.until.Equal(want) {
+		t.Fatalf("until = %s want %s", creds.until, want)
+	}
+}
+
+func TestDirectTranslateClientKeepsCookies(t *testing.T) {
+	if directTranslateClient().Jar == nil {
+		t.Fatal("translation client has no cookie jar")
+	}
+}
+
+func TestDomesticAIHosts(t *testing.T) {
+	for _, host := range []string{"api.deepseek.com", "dashscope.aliyuncs.com", "open.bigmodel.cn", "api.moonshot.cn"} {
+		if !isDomesticAIHost(host) {
+			t.Fatalf("%s should stay direct", host)
+		}
+	}
+	for _, host := range []string{"api.openai.com", "api.deepl.com", "api-free.deepl.com"} {
+		if isDomesticAIHost(host) {
+			t.Fatalf("%s should use the proxy", host)
+		}
 	}
 }
