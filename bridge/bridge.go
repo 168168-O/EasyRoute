@@ -144,6 +144,12 @@ func (a *App) ShowMainWindow() {
 	runtime.WindowShow(a.Ctx)
 }
 
+func (a *App) RevealFromTray() {
+	log.Printf("RevealFromTray")
+	runtime.WindowShow(a.Ctx)
+	runtime.EventsEmit(a.Ctx, "onTrayClick")
+}
+
 func createMacOSSymlink() {
 	currentUser, err := user.Current()
 	if err != nil {

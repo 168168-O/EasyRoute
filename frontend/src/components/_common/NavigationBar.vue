@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import rawRoutes from '@/router/routes'
 import { useAppSettingsStore } from '@/stores'
+import { bindSecurityAlertVisibility, securityAlerting } from '@/utils/securityAlertState'
+
+onMounted(bindSecurityAlertVisibility)
 
 const { t } = useI18n()
 const appSettings = useAppSettingsStore()
@@ -58,6 +61,7 @@ const icons: Record<string, string> = {
         >
           <span class="nav-ico" v-html="icons[String(r.name)] || ''" />
           {{ (r.meta && t(r.meta.name)) || r.name }}
+          <i v-if="r.name === 'Overview' && securityAlerting" class="nav-alert" />
         </Button>
       </RouterLink>
     </div>

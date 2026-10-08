@@ -27,24 +27,22 @@ import {
   handleUseProxy,
 } from '@/utils'
 
+import { securityAlerting } from './securityAlertState'
+import { trayIconFile } from './trayIcon'
+
 const getTrayIcons = () => {
   const envStore = useEnvStore()
   const appSettings = useAppSettingsStore()
   const kernelApiStore = useKernelApiStore()
 
-  const themeMode = appSettings.themeMode
-  const ext = envStore.env.os === OS.Linux ? '.png' : '.ico'
-  const folder = envStore.env.os === OS.Linux ? 'imgs' : 'icons'
-  let icon = `data/.cache/${folder}/tray_normal_${themeMode}${ext}`
-
-  if (kernelApiStore.running) {
-    if (kernelApiStore.config.tun.enable) {
-      icon = `data/.cache/${folder}/tray_tun_${themeMode}${ext}`
-    } else if (envStore.systemProxy) {
-      icon = `data/.cache/${folder}/tray_proxy_${themeMode}${ext}`
-    }
-  }
-  return icon
+  return trayIconFile({
+    os: envStore.env.os,
+    theme: appSettings.themeMode,
+    running: kernelApiStore.running,
+    tun: !!kernelApiStore.config.tun?.enable,
+    proxy: !!envStore.systemProxy,
+    alert: securityAlerting.value,
+  })
 }
 
 const generateUniqueEventsForMenu = (menus: App.MenuItem[]) => {

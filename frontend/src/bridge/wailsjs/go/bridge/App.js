@@ -154,6 +154,10 @@ export function SetSystemDNS(arg1, arg2) {
   return window['go']['bridge']['App']['SetSystemDNS'](arg1, arg2);
 }
 
+export function SecurityCheck(arg1, arg2) {
+  return window['go']['bridge']['App']['SecurityCheck'](arg1, arg2);
+}
+
 export function SetSystemProxy(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['bridge']['App']['SetSystemProxy'](arg1, arg2, arg3, arg4, arg5);
 }

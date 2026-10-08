@@ -21,6 +21,24 @@ export const UpdateTrayAndMenus = Bridge.UpdateTrayAndMenus
 
 export const LookupHost = (host: string) => Bridge.LookupHost(host)
 
+export interface SecurityItem {
+  id: string
+  name: string
+  level: 'green' | 'yellow' | 'red'
+  text: string
+}
+
+export interface SecurityReport {
+  supported: boolean
+  items: SecurityItem[]
+}
+
+export const SecurityCheck = async (ownPort = 0, tunName = '') => {
+  const { flag, data } = await Bridge.SecurityCheck(ownPort, tunName)
+  if (!flag) throw new Error(typeof data === 'string' ? data : '安全检查没有完成')
+  return JSON.parse(data) as SecurityReport
+}
+
 export const ExportBackup = async (dest = '') => {
   const { flag, data } = await Bridge.ExportBackup(dest)
   if (!flag) throw data
