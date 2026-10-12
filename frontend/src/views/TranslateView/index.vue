@@ -42,10 +42,17 @@ const output = ref('')
 const target = ref('auto')
 const lastFrom = ref('')
 const lastTo = ref('')
+const lastProvider = ref('')
 const busy = ref(false)
 const errorText = ref('')
+const historyOpen = ref(false)
 
 const history = computed(() => (appSettings.app.translateHistory || []).slice(0, 20))
+const providerLabel = computed(() => {
+  if (lastProvider.value === 'bing') return '必应'
+  if (lastProvider.value === 'google') return '谷歌'
+  return lastProvider.value
+})
 
 const langLabel = (code: string) => targets.find((item) => item.value === code)?.label || code || t('translate.auto')
 
@@ -71,6 +78,7 @@ const runTranslate = async () => {
     output.value = result.text
     lastFrom.value = result.sourceLang || ''
     lastTo.value = result.targetLang || ''
+    lastProvider.value = result.provider || ''
     remember({
       input: text,
       output: result.text,
@@ -131,6 +139,7 @@ const swap = () => {
   const from = lastFrom.value
   lastFrom.value = lastTo.value
   lastTo.value = from
+  lastProvider.value = ''
   errorText.value = ''
 }
 
@@ -139,8 +148,10 @@ const restore = (item: { input: string; output: string; from: string; to: string
   output.value = item.output
   lastFrom.value = item.from
   lastTo.value = item.to
+  lastProvider.value = ''
   if (item.to) target.value = item.to
   errorText.value = ''
+  historyOpen.value = false
 }
 
 const preview = (text: string) => (text.length > 42 ? text.slice(0, 42) + '…' : text)
@@ -173,6 +184,7 @@ const preview = (text: string) => (text.length > 42 ? text.slice(0, 42) + '…' 
           <em v-if="lastFrom || lastTo">{{ langLabel(lastFrom) }} → {{ langLabel(lastTo) }}</em>
         </span>
         <textarea v-model="output" class="tr-box" readonly :placeholder="t('translate.resultPh')" />
+        <p v-if="output && providerLabel" class="tr-engine">{{ providerLabel }}</p>
       </label>
     </div>
 
@@ -184,25 +196,26 @@ const preview = (text: string) => (text.length > 42 ? text.slice(0, 42) + '…' 
         {{ t('translate.paste') }}
       </button>
       <button type="button" class="ghost-btn" @click="copyResult">{{ t('translate.copy') }}</button>
+      <button type="button" class="ghost-btn" @click="historyOpen = !historyOpen">
+        {{ historyOpen ? t('translate.historyHide') : t('translate.historyOpen') }}
+        <span v-if="history.length"> {{ history.length }}</span>
+      </button>
       <span class="tr-keys">Ctrl+Enter</span>
+      <div v-if="historyOpen" class="tr-history-pop">
+        <div v-if="!history.length" class="app-exe">{{ t('translate.historyEmpty') }}</div>
+        <button
+          v-for="item in history"
+          :key="item.id"
+          type="button"
+          class="tr-history"
+          @click="restore(item)"
+        >
+          <b>{{ preview(item.input) }}</b>
+          <span>{{ preview(item.output) }}</span>
+        </button>
+      </div>
     </div>
     <div v-if="errorText" class="tr-error">{{ errorText }}</div>
     <div class="tr-note">{{ t('translate.direct') }}</div>
-
-    <div class="group">
-      <b>{{ t('translate.history') }}</b>
-      <span>{{ history.length }}</span>
-    </div>
-    <div v-if="!history.length" class="app-exe">{{ t('translate.historyEmpty') }}</div>
-    <button
-      v-for="item in history"
-      :key="item.id"
-      type="button"
-      class="tr-history"
-      @click="restore(item)"
-    >
-      <b>{{ preview(item.input) }}</b>
-      <span>{{ preview(item.output) }}</span>
-    </button>
   </div>
 </template>

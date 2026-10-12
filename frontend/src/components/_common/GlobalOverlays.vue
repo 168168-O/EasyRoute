@@ -46,7 +46,7 @@ const minimizeAll = () => {
     class="fixed right-32 bottom-32 flex flex-col gap-8 z-9999"
   >
     <Dropdown v-if="appStore.modalMinimized.length" placement="top">
-      <Button icon="adjust" class="shadow" />
+      <Button icon="adjust" class="glass-ring" />
       <template #overlay>
         <Card title="common.modalList">
           <template v-if="false" #extra>
@@ -77,7 +77,7 @@ const minimizeAll = () => {
       v-tips="'home.overview.restart'"
       :loading="kernelApiStore.restarting"
       icon="restart"
-      class="rounded-full w-42 h-42 shadow"
+      class="glass-ring rounded-full w-42 h-42"
       @click="handleRestartCore"
     />
   </div>

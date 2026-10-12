@@ -731,6 +731,14 @@ export default {
     systemProxyDNS: 'DNS While Core Is Running',
     systemDefaultDNS: 'DNS While Core Is Stopped',
     autoStartKernel: 'Start core on launch',
+    screenshot: {
+      hotkey: 'Screenshot hotkey',
+      hotkeyTips: 'Default Ctrl+Alt+A. Select a region, then copy, save, or pin it. A pin stays on top, snaps to screen edges, zooms with the wheel, changes opacity with Ctrl+wheel, and closes on double-click or Esc. Right-click to copy, save, or translate.',
+      translateHotkey: 'Screenshot translate hotkey',
+      translateHotkeyTips: 'Default Ctrl+Alt+T. Select English text to see the original and a Chinese translation.',
+      deepseek: 'DeepSeek key',
+      deepseekTips: 'Optional. Screenshot translation uses DeepSeek when this is set; otherwise Google through the VPN, or MyMemory when the VPN is off.',
+    },
     realMemoryUsage: 'Show actual core memory usage',
     autoRestartKernel: {
       name: 'Auto-restart core on config changes',
@@ -841,8 +849,10 @@ export default {
     copied: '译文已复制',
     emptyClipboard: '剪贴板里没有文字',
     copyEmpty: '还没有译文可以复制',
-    history: '最近的翻译',
-    historyEmpty: '还没有翻译记录',
+    history: 'Recent translations',
+    historyOpen: 'Recent translations',
+    historyHide: 'Hide history',
+    historyEmpty: 'No saved translations',
     direct: '优先直连翻译，不走代理；只有直连失败才会改走代理。',
   },
   about: {

@@ -1,4 +1,4 @@
-import { deleteConnection, getConnections, useProxy } from '@/api/kernel'
+import { closeAllConnections, deleteConnection, getConnections, useProxy } from '@/api/kernel'
 import {
   AbsolutePath,
   Exec,
@@ -272,12 +272,18 @@ export const handleChangeMode = async (mode: 'direct' | 'global' | 'rule') => {
   const kernelApiStore = useKernelApiStore()
 
   if (mode === kernelApiStore.config.mode) return
+  if (kernelApiStore.starting || kernelApiStore.stopping || kernelApiStore.restarting) return
 
-  kernelApiStore.updateConfig('mode', mode)
-
-  const { connections } = await getConnections()
-  const promises = (connections || []).map((v) => deleteConnection(v.id))
-  await Promise.all(promises)
+  const previous = kernelApiStore.config.mode
+  kernelApiStore.config.mode = mode
+  try {
+    await kernelApiStore.updateConfig('mode', mode)
+    // One request closes every connection. Listing them all freezes a low-RAM PC.
+    closeAllConnections().catch(() => undefined)
+  } catch (error: any) {
+    if (kernelApiStore.config.mode === mode) kernelApiStore.config.mode = previous
+    message.error(error?.message || error)
+  }
 }
 
 export const addToRuleSet = async (

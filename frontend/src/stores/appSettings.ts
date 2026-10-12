@@ -40,6 +40,8 @@ import {
 } from '@/enums/app'
 import i18n, { loadLocale } from '@/lang'
 import { useAppStore, useEnvStore } from '@/stores'
+import { normalizePinnedRoutes } from '@/utils/appRouting'
+import { migrateAppSettings } from '@/utils/settingsMigration'
 import { debounce, updateTrayAndMenus, ignoredError, deepClone, message } from '@/utils'
 
 export const useAppSettingsStore = defineStore('app-settings', () => {
@@ -57,6 +59,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     dynamicBackground: true,
     backgroundVideo: '',
     appPrograms: [],
+    pinnedRoutes: { wechat: 'direct', douyin: 'direct' },
+    domesticDirect: true,
+    simpleMode: true,
     translateHistory: [],
     primaryColor: '#000',
     secondaryColor: '#545454',
@@ -84,6 +89,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     autoStartKernel: false,
     preferRunAsAdmin: true,
     autoRestartKernel: false,
+    tunEnabled: true,
+    screenshotHotkey: 'Ctrl+Alt+A',
+    screenshotTranslateHotkey: 'Ctrl+Alt+T',
+    deepseekApiKey: '',
     userAgent: '',
     startupDelay: 30,
     connections: DefaultConnections(),
@@ -215,6 +224,14 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     if (!Array.isArray(settings.appPrograms)) settings.appPrograms = []
     if (!Array.isArray(settings.translateHistory)) settings.translateHistory = []
     settings.translateHistory = settings.translateHistory.slice(0, 20)
+    if (settings.tunEnabled === undefined) settings.tunEnabled = true
+    if (settings.screenshotHotkey === undefined) settings.screenshotHotkey = 'Ctrl+Alt+A'
+    if (settings.screenshotTranslateHotkey === undefined) settings.screenshotTranslateHotkey = 'Ctrl+Alt+T'
+    if (settings.deepseekApiKey === undefined) settings.deepseekApiKey = ''
+    settings.pinnedRoutes = normalizePinnedRoutes(settings.pinnedRoutes)
+    if (settings.domesticDirect === undefined) settings.domesticDirect = true
+    if (settings.simpleMode === undefined) settings.simpleMode = true
+    migrateAppSettings(settings as any, !!data)
 
     app.value = settings
     latestUserSettings = stringify(app.value)

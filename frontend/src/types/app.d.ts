@@ -63,6 +63,18 @@ declare namespace App {
       exe: string
       mode: AppRouteMode
     }[]
+    /** Saved WeChat / Douyin choice. Only an explicit proxy value leaves 走本地. */
+    pinnedRoutes: {
+      wechat: AppRouteMode
+      douyin: AppRouteMode
+    }
+    /** geosite-cn / geoip-cn from programs set to 走代理 goes direct. Default on. */
+    domesticDirect: boolean
+    /** Nav shows 概览, 软件分流, 订阅, 设置, 翻译. Default on. */
+    simpleMode: boolean
+    exitOnCloseMigrated?: boolean
+    sortByDelayDefaulted?: boolean
+    addGroupToMenuDefaulted?: boolean
     translateHistory: {
       id: string
       input: string
@@ -97,6 +109,14 @@ declare namespace App {
     autoStartKernel: boolean
     preferRunAsAdmin: boolean
     autoRestartKernel: boolean
+    /** User-facing TUN switch. False stays off across core restarts. */
+    tunEnabled: boolean
+    /** Screenshot region hotkey. Empty turns it off. */
+    screenshotHotkey: string
+    /** Screenshot translate hotkey. Empty turns it off. */
+    screenshotTranslateHotkey: string
+    /** Optional DeepSeek key used only by screenshot translation. */
+    deepseekApiKey: string
     userAgent: string
     startupDelay: number
     connections: {

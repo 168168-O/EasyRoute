@@ -110,6 +110,26 @@ test('unknown Douyin install path and private IPs go direct, and TUN is enabled'
   assert.equal(routed.route.find_process, true)
   assert.ok(routed.inbounds.some((inbound: { type: string }) => inbound.type === 'tun'))
 
+  const withoutTun = applyAppRouting(sampleBaseConfig(), {
+    programs,
+    extraDirectExes: ['douyin_extra.exe'],
+    tunEnabled: false,
+  })
+  assert.equal(
+    withoutTun.inbounds.some((inbound: { type: string }) => inbound.type === 'tun'),
+    false,
+  )
+  assert.equal(
+    matchOutbound(withoutTun.route.rules, { processName: 'Weixin.exe', clashMode: 'global' }),
+    'direct',
+  )
+  assert.equal(matchOutbound(withoutTun.route.rules, { processName: 'douyin.exe' }), 'direct')
+
+  const forced = sampleBaseConfig()
+  forced.inbounds.push({ type: 'tun', tag: 'old-tun' })
+  const stripped = applyAppRouting(forced, { programs, tunEnabled: false })
+  assert.equal(stripped.inbounds.some((inbound: { type: string }) => inbound.type === 'tun'), false)
+
   const privateIndex = routed.route.rules.findIndex(
     (rule: Record<string, unknown>) => rule.ip_is_private === true,
   )

@@ -82,6 +82,8 @@ export function TcpPing(arg1:string,arg2:bridge.NetOptions):Promise<bridge.FlagR
 
 export function Translate(arg1:string,arg2:string,arg3:string):Promise<bridge.FlagResult>;
 
+export function ApplyScreenshotHotkeys(arg1:string,arg2:string,arg3:string,arg4:string):Promise<bridge.FlagResult>;
+
 export function TcpRequest(arg1:string,arg2:string,arg3:bridge.NetOptions):Promise<bridge.FlagResult>;
 
 export function UdpRequest(arg1:string,arg2:string,arg3:bridge.NetOptions):Promise<bridge.FlagResult>;
@@ -101,3 +103,7 @@ export function UpdateTrayMenus(arg1:Array<bridge.MenuItem>):Promise<void>;
 export function Upload(arg1:string,arg2:string,arg3:string,arg4:Record<string, string>,arg5:string,arg6:bridge.RequestOptions):Promise<bridge.HTTPResult>;
 
 export function WriteFile(arg1:string,arg2:string,arg3:bridge.IOOptions):Promise<bridge.FlagResult>;
+
+export function CleanupNetworkAfterStop():Promise<bridge.FlagResult>;
+
+export function LookupHost(arg1:string):Promise<bridge.FlagResult>;

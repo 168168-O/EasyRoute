@@ -295,3 +295,11 @@ export const UdpRequest = async (address: string, payload: string, options: NetO
   if (!flag) throw data
   return data
 }
+
+export const LookupHost = async (host: string) => {
+  const { flag, data } = await Bridge.LookupHost(host)
+  if (!flag) {
+    throw data || 'LookupHost failed'
+  }
+  return data
+}

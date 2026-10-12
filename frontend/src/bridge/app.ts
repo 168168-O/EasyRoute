@@ -97,6 +97,16 @@ export const BackgroundVideoURL = async () => {
   return data as string
 }
 
+export const ApplyScreenshotHotkeys = async (
+  shot: string,
+  translate: string,
+  deepseekKey = '',
+  coreProxy = '',
+) => {
+  const { flag, data } = await Bridge.ApplyScreenshotHotkeys(shot, translate, deepseekKey, coreProxy)
+  return { flag: !!flag, data: data || '' }
+}
+
 export const Translate = async (text: string, target: string, coreProxy = '') => {
   const { flag, data } = await Bridge.Translate(text, target, coreProxy)
   if (!flag) throw data
@@ -115,3 +125,12 @@ export const Notify = async (title: string, body: string) => {
   await RequestNotificationAuthorization()
   await SendNotification({ id: sampleID(), title, body })
 }
+
+export const CleanupNetworkAfterStop = async () => {
+  const { flag, data } = await Bridge.CleanupNetworkAfterStop()
+  if (!flag) {
+    throw data || 'CleanupNetworkAfterStop failed'
+  }
+  return data
+}
+

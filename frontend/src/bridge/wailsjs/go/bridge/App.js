@@ -162,6 +162,10 @@ export function Translate(arg1, arg2, arg3) {
   return window['go']['bridge']['App']['Translate'](arg1, arg2, arg3);
 }
 
+export function ApplyScreenshotHotkeys(arg1, arg2, arg3, arg4) {
+  return window['go']['bridge']['App']['ApplyScreenshotHotkeys'](arg1, arg2, arg3, arg4);
+}
+
 export function TcpRequest(arg1, arg2, arg3) {
   return window['go']['bridge']['App']['TcpRequest'](arg1, arg2, arg3);
 }
@@ -200,4 +204,12 @@ export function Upload(arg1, arg2, arg3, arg4, arg5, arg6) {
 
 export function WriteFile(arg1, arg2, arg3) {
   return window['go']['bridge']['App']['WriteFile'](arg1, arg2, arg3);
+}
+
+export function CleanupNetworkAfterStop() {
+  return window['go']['bridge']['App']['CleanupNetworkAfterStop']();
+}
+
+export function LookupHost(arg1) {
+  return window['go']['bridge']['App']['LookupHost'](arg1);
 }
