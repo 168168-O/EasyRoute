@@ -97,6 +97,8 @@ github.com/wailsapp/wails/v2 v2.15.0 h1:u7cHK+UesZOlYxyJxfYLteaCPhws6UsZoDdqUeju
 github.com/wailsapp/wails/v2 v2.15.0/go.mod h1:scxrgwfsv6yR6fE6cCF+Flfl+JeU+SR87T9x4kILJ6M=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
+github.com/zn-chen/sysocr v0.0.0-20260203092347-713d6d1a7997 h1:VasrEAiJikwI6AysLDNjGb5rsqaToZaXw8br0rZ/J8c=
+github.com/zn-chen/sysocr v0.0.0-20260203092347-713d6d1a7997/go.mod h1:4Y3w+c2ApCNiTAFdyaqI4vHyXccVZu9ayh1DqwdaHC4=
 golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
 golang.org/x/crypto v0.56.0/go.mod h1:OMW5y6CY9l38uPLmxU6l6pwcXp1obtLo3e6gT7gQR2I=
 golang.org/x/net v0.0.0-20210505024714-0287a6fb4125/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=

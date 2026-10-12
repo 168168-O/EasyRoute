@@ -265,18 +265,24 @@ const handleResetConnections = () => {
   message.success('common.success')
 }
 
-const unregisterConnectionsHandler = kernelApiStore.onConnections((data) => {
+const CONNECTION_CAP = 200
+const CLOSED_CAP = 40
+let applyTimer = 0
+let pendingConnections: CoreApiConnectionsData | null = null
+
+const applyConnections = (data: CoreApiConnectionsData) => {
   if (isPause.value) return
-  const connections = data.connections || []
+  const connections = (data.connections || []).slice(0, CONNECTION_CAP)
 
   dataSource.value.forEach((connection) => {
-    // Record Disconnected Connections
     const exist = connections.some((v) => v.id === connection.id)
-    !exist && disconnectedData.value.push(connection)
+    if (!exist) disconnectedData.value.push(connection)
   })
+  if (disconnectedData.value.length > CLOSED_CAP) {
+    disconnectedData.value.splice(0, disconnectedData.value.length - CLOSED_CAP)
+  }
 
   dataSource.value = connections.map((connection) => {
-    // Record Previous Traffic Information
     const result = { ...connection, up: 0, down: 0 }
     const cache = TrafficCache[connection.id]
     result.up = cache?.up || connection.upload
@@ -287,10 +293,20 @@ const unregisterConnectionsHandler = kernelApiStore.onConnections((data) => {
     }
     return result
   })
+}
+
+const unregisterConnectionsHandler = kernelApiStore.onConnections((data) => {
+  pendingConnections = data
+  if (applyTimer) return
+  applyTimer = window.setTimeout(() => {
+    applyTimer = 0
+    if (pendingConnections) applyConnections(pendingConnections)
+  }, 1000)
 })
 
 onUnmounted(() => {
   unregisterConnectionsHandler()
+  if (applyTimer) window.clearTimeout(applyTimer)
 })
 </script>
 

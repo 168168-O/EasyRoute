@@ -730,6 +730,14 @@ export default {
     systemProxyDNS: '核心运行时的主备 DNS 服务器',
     systemDefaultDNS: '核心停止时的主备 DNS 服务器',
     autoStartKernel: '程序启动时开启核心',
+    screenshot: {
+      hotkey: '截图快捷键',
+      hotkeyTips: '默认 Ctrl+Alt+A。框选后可以复制、保存或贴住。贴住的图保持在最前，可拖动并吸边；滚轮缩放，Ctrl+滚轮调透明度，双击或 Esc 关闭，右键可复制、保存或翻译。',
+      translateHotkey: '截图翻译快捷键',
+      translateHotkeyTips: '默认 Ctrl+Alt+T。框选英文后显示原文和中文。',
+      deepseek: 'DeepSeek 密钥',
+      deepseekTips: '可选。填写后截图翻译优先用 DeepSeek；留空则在 VPN 开启时走谷歌，否则用 MyMemory。',
+    },
     realMemoryUsage: '显示真实的核心内存占用',
     autoRestartKernel: {
       name: '相关配置变化时自动重启核心',
@@ -841,6 +849,8 @@ export default {
     emptyClipboard: '剪贴板里没有文字',
     copyEmpty: '还没有译文可以复制',
     history: '最近的翻译',
+    historyOpen: '最近的翻译',
+    historyHide: '收起记录',
     historyEmpty: '还没有翻译记录',
     direct: '优先直连翻译，不走代理；只有直连失败才会改走代理。',
   },

@@ -23,6 +23,11 @@ export interface AppRoutingOptions {
   directOutbound?: string
   /** Full path of this app, from envStore.env.appPath. */
   appPath?: string
+  /**
+   * When false, do not inject a TUN inbound. Defaults to on so per-app rules
+   * can see traffic. An explicit false is the user's choice and must stick.
+   */
+  tunEnabled?: boolean
 }
 
 export const WECHAT_PROCESSES = [
@@ -291,8 +296,12 @@ const ensureDirectOutbound = (config: Record<string, any>, tag: string) => {
   }
 }
 
-const ensureTun = (config: Record<string, any>) => {
+const ensureTun = (config: Record<string, any>, enabled: boolean) => {
   const inbounds = (config.inbounds || (config.inbounds = [])) as Record<string, any>[]
+  if (!enabled) {
+    config.inbounds = inbounds.filter((inbound) => inbound.type !== 'tun')
+    return
+  }
   let tun = inbounds.find((inbound) => inbound.type === 'tun')
   if (!tun) {
     tun = {
@@ -475,15 +484,16 @@ const stripInjected = (existing: Record<string, unknown>[], injected: Record<str
 }
 
 /**
- * Prepend safety and per-app rules, enable TUN + find_process, and split DNS.
+ * Prepend safety and per-app rules, optionally enable TUN + find_process, and split DNS.
  * Unidentified connections use the direct outbound. Safe to call more than once.
+ * WeChat and Douyin stay direct whether or not TUN is injected.
  */
 export const applyAppRouting = (config: Record<string, any>, options: AppRoutingOptions = {}) => {
   const programs = options.programs || []
   const proxyOutbound = findProxyOutbound(config, options.proxyOutbound)
   const directOutbound = findDirectOutbound(config, options.directOutbound)
   ensureDirectOutbound(config, directOutbound)
-  ensureTun(config)
+  ensureTun(config, options.tunEnabled !== false)
 
   const proxyInboundTags = findProxyInboundTags(config)
   const { rules: prefix, proxyExes, directExes } = buildPrefix(

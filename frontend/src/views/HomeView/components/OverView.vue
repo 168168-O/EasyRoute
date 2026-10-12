@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
+import { computed, ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { getConnections } from '@/api/kernel'
 import { ProcessMemory } from '@/bridge'
 import { ModeOptions } from '@/constant/kernel'
 import { useEnvStore, useAppStore, useKernelApiStore, useAppSettingsStore } from '@/stores'
@@ -17,16 +18,18 @@ const statistics = ref({
   download: 0,
   downloadTotal: 0,
   uploadTotal: 0,
-  connections: [] as any[],
+  connectionCount: 0,
   inuse: 0,
   memUsage: 0,
 })
-
 const { t } = useI18n()
 const appStore = useAppStore()
 const envStore = useEnvStore()
 const appSettings = useAppSettingsStore()
 const kernelApiStore = useKernelApiStore()
+const coreBusy = computed(
+  () => kernelApiStore.starting || kernelApiStore.stopping || kernelApiStore.restarting,
+)
 
 const handleRestartKernel = async () => {
   try {
@@ -142,16 +145,34 @@ const unregisterTrafficHandler = kernelApiStore.onTraffic((data) => {
   }
 })
 
-const unregisterConnectionsHandler = kernelApiStore.onConnections((data) => {
-  statistics.value.downloadTotal = data.downloadTotal
-  statistics.value.uploadTotal = data.uploadTotal
-  statistics.value.connections = data.connections || []
-})
+// The connections websocket pushes the full table many times a second.
+// On a 4 GB PC that parse keeps the UI thread busy, so the overview only
+// samples the totals and then drops the list.
+let sampling = false
+let sampleTimer = 0
+let sampleFirst = 0
+const sampleConnectionTotals = async () => {
+  if (sampling || !kernelApiStore.running) return
+  sampling = true
+  try {
+    const data = await getConnections(2500)
+    statistics.value.downloadTotal = data.downloadTotal || 0
+    statistics.value.uploadTotal = data.uploadTotal || 0
+    statistics.value.connectionCount = data.connections?.length || 0
+  } catch {
+    // Keep the last numbers. A slow core should not freeze the page.
+  } finally {
+    sampling = false
+  }
+}
+sampleTimer = window.setInterval(sampleConnectionTotals, 8000)
+sampleFirst = window.setTimeout(sampleConnectionTotals, 1500)
 
 onUnmounted(() => {
   unregisterMemoryHandler()
   unregisterTrafficHandler()
-  unregisterConnectionsHandler()
+  window.clearInterval(sampleTimer)
+  window.clearTimeout(sampleFirst)
 })
 </script>
 
@@ -173,6 +194,7 @@ onUnmounted(() => {
       </Switch>
       <Switch
         v-model="kernelApiStore.config.tun.enable"
+        :disabled="coreBusy"
         size="small"
         border="square"
         class="ml-8"
@@ -231,7 +253,7 @@ onUnmounted(() => {
         @click="handleShowApiConnections"
       >
         <div class="home-stat-card__value py-8 text-12">
-          {{ statistics.connections.length }}
+          {{ statistics.connectionCount }}
         </div>
       </Card>
       <Card
@@ -268,7 +290,11 @@ onUnmounted(() => {
             :key="mode.value"
             :selected="kernelApiStore.config.mode === mode.value"
             :title="t(mode.label)"
-            :class="['home-mode-card', `home-mode-card--${String(mode.value).toLowerCase()}`]"
+            :class="[
+              'home-mode-card',
+              `home-mode-card--${String(mode.value).toLowerCase()}`,
+              { 'pointer-events-none opacity-60': coreBusy },
+            ]"
             class="cursor-pointer"
             @click="handleChangeMode(mode.value as any)"
           >

@@ -6,7 +6,7 @@ import { formatProxyHost, normalizeProxyHost } from '@/utils'
 import type {
   CoreApiConfig,
   CoreApiProxies,
-  CoreApiConnections,
+  CoreApiConnectionsData,
   CoreApiWsDataMap,
 } from '@/types/kernel'
 
@@ -119,11 +119,13 @@ const createCoreWSHandlerRegister = <K extends WsKey>(key: K) => {
 }
 
 // restful api
-export const probeApiAvailability = () => request.get('/version')
+export const probeApiAvailability = () => request.get('/version', {}, 1500)
 export const getConfigs = () => request.get<CoreApiConfig>(Api.Configs)
-export const setConfigs = (body = {}) => request.patch<null>(Api.Configs, body)
+export const setConfigs = (body = {}) => request.patch<null>(Api.Configs, body, 8000)
 export const getProxies = () => request.get<CoreApiProxies>(Api.Proxies)
-export const getConnections = () => request.get<CoreApiConnections>(Api.Connections)
+export const getConnections = (timeout?: number) =>
+  request.get<CoreApiConnectionsData>(Api.Connections, {}, timeout)
+export const closeAllConnections = () => request.delete<null>(Api.Connections, 8000)
 export const deleteConnection = (id: string) => request.delete<null>(Api.Connections + '/' + id)
 export const useProxy = (group: string, proxy: string) => {
   return request.put<null>(Api.Proxies + '/' + group, { name: proxy })

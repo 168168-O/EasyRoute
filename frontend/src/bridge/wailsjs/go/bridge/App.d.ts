@@ -82,6 +82,8 @@ export function TcpPing(arg1:string,arg2:bridge.NetOptions):Promise<bridge.FlagR
 
 export function Translate(arg1:string,arg2:string,arg3:string):Promise<bridge.FlagResult>;
 
+export function ApplyScreenshotHotkeys(arg1:string,arg2:string,arg3:string,arg4:string):Promise<bridge.FlagResult>;
+
 export function TcpRequest(arg1:string,arg2:string,arg3:bridge.NetOptions):Promise<bridge.FlagResult>;
 
 export function UdpRequest(arg1:string,arg2:string,arg3:bridge.NetOptions):Promise<bridge.FlagResult>;
