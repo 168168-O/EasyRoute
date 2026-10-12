@@ -84,6 +84,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     autoStartKernel: false,
     preferRunAsAdmin: true,
     autoRestartKernel: false,
+    tunEnabled: true,
     userAgent: '',
     startupDelay: 30,
     connections: DefaultConnections(),
@@ -215,6 +216,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     if (!Array.isArray(settings.appPrograms)) settings.appPrograms = []
     if (!Array.isArray(settings.translateHistory)) settings.translateHistory = []
     settings.translateHistory = settings.translateHistory.slice(0, 20)
+    if (settings.tunEnabled === undefined) settings.tunEnabled = true
 
     app.value = settings
     latestUserSettings = stringify(app.value)

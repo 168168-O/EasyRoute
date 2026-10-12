@@ -528,6 +528,9 @@ export const applyRoutingToConfig = async (config: Recordable) => {
     programs,
     extraDirectExes: await readDouyinExes(),
     appPath: envStore.env.appPath,
+    // Undefined (older user.yaml) stays on, matching the previous forced TUN.
+    // An explicit false from the TUN switch must survive the next core start.
+    tunEnabled: appSettings.app.tunEnabled !== false,
   })
 }
 

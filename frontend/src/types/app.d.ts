@@ -97,6 +97,8 @@ declare namespace App {
     autoStartKernel: boolean
     preferRunAsAdmin: boolean
     autoRestartKernel: boolean
+    /** User-facing TUN switch. False stays off across core restarts. */
+    tunEnabled: boolean
     userAgent: string
     startupDelay: number
     connections: {

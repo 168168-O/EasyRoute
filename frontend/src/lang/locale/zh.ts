@@ -841,6 +841,8 @@ export default {
     emptyClipboard: '剪贴板里没有文字',
     copyEmpty: '还没有译文可以复制',
     history: '最近的翻译',
+    historyOpen: '最近的翻译',
+    historyHide: '收起记录',
     historyEmpty: '还没有翻译记录',
     direct: '优先直连翻译，不走代理；只有直连失败才会改走代理。',
   },

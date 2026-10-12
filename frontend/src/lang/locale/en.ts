@@ -841,8 +841,10 @@ export default {
     copied: '译文已复制',
     emptyClipboard: '剪贴板里没有文字',
     copyEmpty: '还没有译文可以复制',
-    history: '最近的翻译',
-    historyEmpty: '还没有翻译记录',
+    history: 'Recent translations',
+    historyOpen: 'Recent translations',
+    historyHide: 'Hide history',
+    historyEmpty: 'No saved translations',
     direct: '优先直连翻译，不走代理；只有直连失败才会改走代理。',
   },
   about: {

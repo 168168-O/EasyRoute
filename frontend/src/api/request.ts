@@ -33,13 +33,13 @@ export class Request {
 
   private request = async <T>(
     url: string,
-    options: { method: Method; body?: Record<string, any> },
+    options: { method: Method; body?: Record<string, any>; timeout?: number },
   ) => {
     this.beforeRequest()
 
     const init: RequestInit = {
       method: options.method,
-      signal: AbortSignal.timeout(this.timeout),
+      signal: AbortSignal.timeout(options.timeout ?? this.timeout),
     }
 
     if (this.base) {
@@ -85,9 +85,14 @@ export class Request {
     return json as T
   }
 
-  public get = <T>(url: string, body = {}) => this.request<T>(url, { method: 'GET', body })
-  public post = <T>(url: string, body = {}) => this.request<T>(url, { method: 'POST', body })
-  public put = <T>(url: string, body = {}) => this.request<T>(url, { method: 'PUT', body })
-  public patch = <T>(url: string, body = {}) => this.request<T>(url, { method: 'PATCH', body })
-  public delete = <T>(url: string) => this.request<T>(url, { method: 'DELETE' })
+  public get = <T>(url: string, body = {}, timeout?: number) =>
+    this.request<T>(url, { method: 'GET', body, timeout })
+  public post = <T>(url: string, body = {}, timeout?: number) =>
+    this.request<T>(url, { method: 'POST', body, timeout })
+  public put = <T>(url: string, body = {}, timeout?: number) =>
+    this.request<T>(url, { method: 'PUT', body, timeout })
+  public patch = <T>(url: string, body = {}, timeout?: number) =>
+    this.request<T>(url, { method: 'PATCH', body, timeout })
+  public delete = <T>(url: string, timeout?: number) =>
+    this.request<T>(url, { method: 'DELETE', timeout })
 }

@@ -57,4 +57,18 @@ test('sing-box check accepts the generated config in rule and global mode', () =
     const version = execFileSync(bin, ['version'], { encoding: 'utf8' })
     assert.match(version, /1\.14\.2/)
   }
+
+  const tunOff = checkedConfig('rule')
+  const withoutTun = applyAppRouting(tunOff, {
+    programs,
+    extraDirectExes: ['douyin_extra.exe'],
+    proxyOutbound: 'proxy',
+    directOutbound: 'direct',
+    appPath: String.raw`C:\达货爱vpn姑娘\达货爱vpn姑娘.exe`,
+    tunEnabled: false,
+  })
+  assert.equal(withoutTun.inbounds.some((inbound) => inbound.type === 'tun'), false)
+  const tunOffFile = join(dir, 'config-tun-off.json')
+  writeFileSync(tunOffFile, JSON.stringify(withoutTun))
+  execFileSync(bin, ['check', '-c', tunOffFile], { stdio: 'pipe' })
 })

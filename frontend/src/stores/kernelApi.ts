@@ -135,7 +135,8 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
       socks?.socks?.listen.listen,
     ].some((address) => address === '0.0.0.0' || address === '::')
 
-    config.value.tun.enable = !!tun?.enable
+    // The switch follows the saved choice. A generated config must not flip it back on.
+    config.value.tun.enable = appSettingsStore.app.tunEnabled !== false && !!tun?.enable
     config.value.tun.device = tun?.tun?.interface_name || ''
     config.value.tun.stack = tun?.tun?.stack || ''
     config.value['interface-name'] = runtimeProfile.route.default_interface
@@ -148,7 +149,8 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     config.value['interface-name'] = ''
     config.value['allow-lan'] = false
     config.value.mode = ''
-    config.value.tun.enable = false
+    // Keep the saved switch. A core restart must not paint TUN back on by itself.
+    config.value.tun.enable = appSettingsStore.app.tunEnabled !== false
     config.value.tun.stack = ''
     config.value.tun.device = ''
   }
@@ -235,8 +237,18 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
 
     fieldHandlerMap[field]?.()
 
-    await restartCore(undefined, true)
-    await envStore.updateSystemProxyStatus()
+    const previousTun = appSettingsStore.app.tunEnabled !== false
+    if (field === 'tun') {
+      appSettingsStore.app.tunEnabled = !!value?.enable
+    }
+
+    try {
+      await restartCore(undefined, true)
+      await envStore.updateSystemProxyStatus()
+    } catch (error) {
+      if (field === 'tun') appSettingsStore.app.tunEnabled = previousTun
+      throw error
+    }
   }
 
   const refreshProviderProxies = async () => {
@@ -256,6 +268,22 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
   const coreStateLoading = ref(true)
   let isCoreStartedByThisInstance = false
   let { promise: coreStoppedPromise, resolve: coreStoppedResolver } = Promise.withResolvers()
+  // Bumped on every start, stop, and restart so a late sing-box exit cannot
+  // revive routing after the user asked to stay stopped.
+  let epoch = 0
+  let userHold = false
+  let releasing = false
+  let startTicket = 0
+  let stopTicket = 0
+  let restartTicket = 0
+
+  const stillCurrent = (ticket: number) => ticket === epoch && !userHold
+
+  const armCoreStop = () => {
+    coreStoppedPromise = new Promise((resolve) => {
+      coreStoppedResolver = resolve
+    })
+  }
 
   const initCoreState = async () => {
     corePid.value = Number(await ReadFile(CorePidFilePath).catch(() => -1))
@@ -273,7 +301,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     }
   }
 
-  const runCoreProcess = async (isAlpha: boolean) => {
+  const runCoreProcess = async (isAlpha: boolean, ticket: number) => {
     let stopped = false
     const pid = await ExecBackground(
       CoreWorkingDirectory + '/' + getKernelFileName(isAlpha),
@@ -284,7 +312,9 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
         const logs = await ReadFile(CoreLogFilePath, { Range: '-4096' }).catch((err) => String(err))
         logs.split('\n').forEach((line) => line && logsStore.recordKernelLog(line))
         end && logsStore.recordKernelLog(end)
-        onCoreStopped()
+        // A newer stop/start owns the process. Ignore this exit.
+        if (ticket !== epoch) return
+        await onCoreStopped()
       },
       {
         PidFile: CorePidFilePath,
@@ -292,67 +322,94 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
         Env: getKernelRuntimeEnv(isAlpha),
       },
     )
-    while (!stopped) {
+    const deadline = Date.now() + 20_000
+    while (!stopped && Date.now() < deadline) {
+      if (!stillCurrent(ticket)) break
       const ok = await probeApiAvailability().catch(() => false)
-      if (ok) break
-      await sleep(500)
+      if (ok) return pid
+      await sleep(400)
     }
 
-    if (stopped) {
-      throw t('kernel.startupFailed')
-    }
-
-    return pid
+    if (pid > 0) await KillProcess(pid, 3).catch(() => undefined)
+    if (!stopped && ticket === epoch) await onCoreStopped()
+    if (!stillCurrent(ticket)) return 0
+    throw t('kernel.startupFailed')
   }
 
-  const onCoreStarted = async (pid: number) => {
+  const onCoreStarted = async (pid: number, ticket: number) => {
+    if (!stillCurrent(ticket)) return
     corePid.value = pid
     running.value = true
     needRestart.value = false
     isCoreStartedByThisInstance = true
-    coreStoppedPromise = new Promise((r) => (coreStoppedResolver = r))
+    armCoreStop()
 
     initWebsocket()
     await Promise.all([refreshConfig(), refreshProviderProxies()])
+    if (!stillCurrent(ticket)) {
+      if (running.value && corePid.value === pid) await onCoreStopped()
+      return
+    }
 
     if (appSettingsStore.app.autoSetSystemProxy) {
       await envStore.setSystemProxy().catch((err) => message.error(err))
     }
+    if (!stillCurrent(ticket)) {
+      await envStore.clearSystemProxy().catch(() => undefined)
+      if (running.value && corePid.value === pid) await onCoreStopped()
+      return
+    }
     if (appSettingsStore.app.autoSetSystemDNS) {
       await envStore.setSystemDNS(true).catch((err) => message.error(err))
     }
+    if (!stillCurrent(ticket)) return
     await envStore.updateSystemProxyStatus()
 
     await pluginsStore.onCoreStartedTrigger()
   }
 
   const onCoreStopped = async () => {
-    if (!isCoreStartedByThisInstance) {
-      await RemoveFile(CorePidFilePath)
+    if (releasing) return
+    if (!running.value && corePid.value < 0) {
+      coreStoppedResolver(null)
+      if (envStore.systemProxy) await envStore.clearSystemProxy().catch(() => undefined)
+      return
     }
+    releasing = true
+    try {
+      if (!isCoreStartedByThisInstance) {
+        await RemoveFile(CorePidFilePath)
+      }
 
-    corePid.value = -1
-    running.value = false
-    needRestart.value = false
+      corePid.value = -1
+      running.value = false
+      needRestart.value = false
 
-    destroyWebsocket()
+      destroyWebsocket()
 
-    await envStore.updateSystemProxyStatus()
-    if (envStore.systemProxy) {
-      await envStore.clearSystemProxy()
+      await envStore.updateSystemProxyStatus()
+      if (envStore.systemProxy) {
+        await envStore.clearSystemProxy().catch(() => undefined)
+      }
+      if (appSettingsStore.app.autoSetSystemDNS || envStore.systemDNSSet) {
+        await envStore.setSystemDNS(false).catch((err) => message.error(err))
+      }
+
+      resetConfig()
+
+      await Promise.race([
+        pluginsStore.onCoreStoppedTrigger().catch(() => undefined),
+        sleep(2000),
+      ])
+
+      coreStoppedResolver(null)
+    } finally {
+      releasing = false
     }
-    if (appSettingsStore.app.autoSetSystemDNS || envStore.systemDNSSet) {
-      await envStore.setSystemDNS(false).catch((err) => message.error(err))
-    }
-
-    resetConfig()
-
-    await pluginsStore.onCoreStoppedTrigger()
-
-    coreStoppedResolver(null)
   }
 
   const ensureElevatedForTun = async () => {
+    if (appSettingsStore.app.tunEnabled === false) return 'ok' as const
     if (envStore.env.os !== OS.Windows || envStore.env.isPrivileged) return 'ok' as const
     const restart = await confirm('settings.tunAdminTitle', 'settings.tunAdminBody', {
       type: 'text',
@@ -367,56 +424,110 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     throw 'settings.tunAdminCancelled'
   }
 
-  const startCore = async (_profile?: App.Profile) => {
-    if ((await ensureElevatedForTun()) === 'leaving') return
+  const launchCore = async (profileArg: App.Profile | undefined, ticket: number) => {
+    if (!stillCurrent(ticket)) return
     if (running.value) throw 'The core is already running'
 
     logsStore.clearKernelLog()
 
     const { profile: profileID, branch } = appSettingsStore.app.kernel
-    const profile = _profile || profilesStore.getProfileById(profileID)
+    const profile = profileArg || profilesStore.getProfileById(profileID)
     if (!profile) throw 'Choose a profile first'
 
-    if (!_profile) {
+    if (!profileArg) {
       runtimeProfile = undefined
     }
 
+    await generateConfigFile(profile, (config) =>
+      pluginsStore.onBeforeCoreStartTrigger(config, profile),
+    )
+    if (!stillCurrent(ticket)) return
+    const isAlpha = branch === Branch.Alpha
+    const pid = await runCoreProcess(isAlpha, ticket)
+    if (!pid || !stillCurrent(ticket)) return
+    await onCoreStarted(pid, ticket)
+  }
+
+  const haltCore = async (ticket: number) => {
+    await Promise.race([
+      pluginsStore.onBeforeCoreStopTrigger().catch(() => undefined),
+      sleep(2000),
+    ])
+    if (ticket !== epoch) return
+    // Drop the system proxy before the process exits so traffic stops immediately.
+    if (envStore.systemProxy) {
+      await envStore.clearSystemProxy().catch(() => undefined)
+    }
+    const pid = corePid.value
+    if (pid > 0) {
+      await KillProcess(pid, 5).catch(() => undefined)
+    }
+    if (ticket !== epoch) return
+    if (running.value || corePid.value > 0) {
+      await Promise.race([coreStoppedPromise, sleep(1500)])
+    }
+    if (ticket !== epoch) return
+    if (running.value || corePid.value > 0) {
+      await onCoreStopped()
+    }
+  }
+
+  const startCore = async (profile?: App.Profile) => {
+    const ticket = ++epoch
+    const mine = ++startTicket
+    if ((await ensureElevatedForTun()) === 'leaving') return
+    // A stop during the admin prompt bumps epoch and must keep the hold.
+    if (ticket !== epoch) return
+    userHold = false
     starting.value = true
     try {
-      await generateConfigFile(profile, (config) =>
-        pluginsStore.onBeforeCoreStartTrigger(config, profile),
-      )
-      const isAlpha = branch === Branch.Alpha
-      const pid = await runCoreProcess(isAlpha)
-      pid && (await onCoreStarted(pid))
+      await launchCore(profile, ticket)
     } finally {
-      starting.value = false
+      if (mine === startTicket) starting.value = false
     }
   }
 
   const stopCore = async () => {
-    if (!running.value) throw 'The core is not running'
-
+    const ticket = ++epoch
+    const mine = ++stopTicket
+    userHold = true
+    restarting.value = false
     stopping.value = true
     try {
-      await pluginsStore.onBeforeCoreStopTrigger()
-      await KillProcess(corePid.value)
-      await (isCoreStartedByThisInstance ? coreStoppedPromise : onCoreStopped())
+      if (!running.value && corePid.value <= 0) {
+        if (envStore.systemProxy) await envStore.clearSystemProxy().catch(() => undefined)
+        return
+      }
+      await haltCore(ticket)
     } finally {
-      stopping.value = false
+      if (mine === stopTicket) stopping.value = false
     }
   }
 
-  const restartCore = async (cleanupTask?: () => Promise<any>, keepRuntimeProfile = false) => {
-    if ((await ensureElevatedForTun()) === 'leaving') return
+  const restartCore = async (
+    cleanupTask?: () => Promise<any>,
+    keepRuntimeProfile = false,
+    source: 'user' | 'auto' = 'user',
+  ) => {
+    if (source === 'auto' && (userHold || stopping.value)) return
+    const ticket = ++epoch
+    const mine = ++restartTicket
     restarting.value = true
     try {
-      await stopCore()
+      if ((await ensureElevatedForTun()) === 'leaving') return
+      if (ticket !== epoch) return
+      if (source === 'auto' && userHold) return
+      if (source === 'user') userHold = false
+      if (running.value || corePid.value > 0) await haltCore(ticket)
+      if (!stillCurrent(ticket)) return
       await cleanupTask?.()
-      await startCore(keepRuntimeProfile ? runtimeProfile : undefined)
+      if (!stillCurrent(ticket)) return
+      await launchCore(keepRuntimeProfile ? runtimeProfile : undefined, ticket)
     } finally {
-      needRestart.value = false
-      restarting.value = false
+      if (mine === restartTicket) {
+        needRestart.value = false
+        restarting.value = false
+      }
     }
   }
 
@@ -545,8 +656,8 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
   })
 
   watch(needRestart, (v) => {
-    if (v && appSettingsStore.app.autoRestartKernel) {
-      restartCore()
+    if (v && appSettingsStore.app.autoRestartKernel && !userHold && !stopping.value) {
+      restartCore(undefined, false, 'auto').catch((error) => console.error(error))
     }
   })
 
