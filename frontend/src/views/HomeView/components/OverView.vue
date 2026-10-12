@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, onUnmounted } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { getConnections } from '@/api/kernel'
 import { ProcessMemory } from '@/bridge'
 import { ModeOptions } from '@/constant/kernel'
 import { useEnvStore, useAppStore, useKernelApiStore, useAppSettingsStore } from '@/stores'
@@ -11,6 +10,8 @@ import { formatBytes, handleChangeMode, message, modal } from '@/utils'
 import CommonController from './CommonController.vue'
 import ConnectionsController from './ConnectionsController.vue'
 import LogsController from './LogsController.vue'
+import NetworkCheck from './NetworkCheck.vue'
+import SubscriptionStatus from './SubscriptionStatus.vue'
 
 const trafficHistory = ref<[number[], number[]]>([[], []])
 const statistics = ref({
@@ -18,18 +19,16 @@ const statistics = ref({
   download: 0,
   downloadTotal: 0,
   uploadTotal: 0,
-  connectionCount: 0,
+  connections: [] as any[],
   inuse: 0,
   memUsage: 0,
 })
+
 const { t } = useI18n()
 const appStore = useAppStore()
 const envStore = useEnvStore()
 const appSettings = useAppSettingsStore()
 const kernelApiStore = useKernelApiStore()
-const coreBusy = computed(
-  () => kernelApiStore.starting || kernelApiStore.stopping || kernelApiStore.restarting,
-)
 
 const handleRestartKernel = async () => {
   try {
@@ -145,34 +144,16 @@ const unregisterTrafficHandler = kernelApiStore.onTraffic((data) => {
   }
 })
 
-// The connections websocket pushes the full table many times a second.
-// On a 4 GB PC that parse keeps the UI thread busy, so the overview only
-// samples the totals and then drops the list.
-let sampling = false
-let sampleTimer = 0
-let sampleFirst = 0
-const sampleConnectionTotals = async () => {
-  if (sampling || !kernelApiStore.running) return
-  sampling = true
-  try {
-    const data = await getConnections(2500)
-    statistics.value.downloadTotal = data.downloadTotal || 0
-    statistics.value.uploadTotal = data.uploadTotal || 0
-    statistics.value.connectionCount = data.connections?.length || 0
-  } catch {
-    // Keep the last numbers. A slow core should not freeze the page.
-  } finally {
-    sampling = false
-  }
-}
-sampleTimer = window.setInterval(sampleConnectionTotals, 8000)
-sampleFirst = window.setTimeout(sampleConnectionTotals, 1500)
+const unregisterConnectionsHandler = kernelApiStore.onConnections((data) => {
+  statistics.value.downloadTotal = data.downloadTotal
+  statistics.value.uploadTotal = data.uploadTotal
+  statistics.value.connections = data.connections || []
+})
 
 onUnmounted(() => {
   unregisterMemoryHandler()
   unregisterTrafficHandler()
-  window.clearInterval(sampleTimer)
-  window.clearTimeout(sampleFirst)
+  unregisterConnectionsHandler()
 })
 </script>
 
@@ -194,7 +175,6 @@ onUnmounted(() => {
       </Switch>
       <Switch
         v-model="kernelApiStore.config.tun.enable"
-        :disabled="coreBusy"
         size="small"
         border="square"
         class="ml-8"
@@ -253,7 +233,7 @@ onUnmounted(() => {
         @click="handleShowApiConnections"
       >
         <div class="home-stat-card__value py-8 text-12">
-          {{ statistics.connectionCount }}
+          {{ statistics.connections.length }}
         </div>
       </Card>
       <Card
@@ -269,6 +249,8 @@ onUnmounted(() => {
         </div>
       </Card>
     </div>
+    <SubscriptionStatus />
+    <NetworkCheck class="mt-12" />
     <div class="home-dashboard flex">
       <div class="traffic-panel w-[60%]">
         <div class="traffic-panel__art" aria-hidden="true"></div>
@@ -290,11 +272,7 @@ onUnmounted(() => {
             :key="mode.value"
             :selected="kernelApiStore.config.mode === mode.value"
             :title="t(mode.label)"
-            :class="[
-              'home-mode-card',
-              `home-mode-card--${String(mode.value).toLowerCase()}`,
-              { 'pointer-events-none opacity-60': coreBusy },
-            ]"
+            :class="['home-mode-card', `home-mode-card--${String(mode.value).toLowerCase()}`]"
             class="cursor-pointer"
             @click="handleChangeMode(mode.value as any)"
           >

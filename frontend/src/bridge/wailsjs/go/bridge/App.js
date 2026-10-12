@@ -205,3 +205,11 @@ export function Upload(arg1, arg2, arg3, arg4, arg5, arg6) {
 export function WriteFile(arg1, arg2, arg3) {
   return window['go']['bridge']['App']['WriteFile'](arg1, arg2, arg3);
 }
+
+export function CleanupNetworkAfterStop() {
+  return window['go']['bridge']['App']['CleanupNetworkAfterStop']();
+}
+
+export function LookupHost(arg1) {
+  return window['go']['bridge']['App']['LookupHost'](arg1);
+}

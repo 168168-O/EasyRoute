@@ -14,7 +14,7 @@ import {
   destroyWebsocket,
   probeApiAvailability,
 } from '@/api/kernel'
-import { ExitApp, ProcessInfo, KillProcess, ExecBackground, ReadFile, RemoveFile } from '@/bridge'
+import { ExitApp, ProcessInfo, KillProcess, ExecBackground, ReadFile, RemoveFile, CleanupNetworkAfterStop } from '@/bridge'
 import {
   CoreConfigFilePath,
   CoreLogFilePath,
@@ -391,6 +391,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
       if (envStore.systemProxy) {
         await envStore.clearSystemProxy().catch(() => undefined)
       }
+      await CleanupNetworkAfterStop().catch(() => undefined)
       if (appSettingsStore.app.autoSetSystemDNS || envStore.systemDNSSet) {
         await envStore.setSystemDNS(false).catch((err) => message.error(err))
       }
@@ -462,6 +463,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     if (pid > 0) {
       await KillProcess(pid, 5).catch(() => undefined)
     }
+    await CleanupNetworkAfterStop().catch(() => undefined)
     if (ticket !== epoch) return
     if (running.value || corePid.value > 0) {
       await Promise.race([coreStoppedPromise, sleep(1500)])

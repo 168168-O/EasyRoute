@@ -8,13 +8,17 @@ import { useAppSettingsStore } from '@/stores'
 const { t } = useI18n()
 const appSettings = useAppSettingsStore()
 
-const routes = computed(() =>
-  rawRoutes.filter(
+const SIMPLE_NAV = ['Overview', 'AppRouting', 'Subscriptions', 'Settings', 'Translate']
+
+const routes = computed(() => {
+  const visible = rawRoutes.filter(
     (r) =>
       r.meta?.hidden === false ||
       (!r.meta?.hidden && appSettings.app.pages.includes(r.name! as string)),
-  ),
-)
+  )
+  if (appSettings.app.simpleMode === false) return visible
+  return visible.filter((route) => SIMPLE_NAV.includes(String(route.name)))
+})
 
 const icons: Record<string, string> = {
   Overview:

@@ -125,3 +125,12 @@ export const Notify = async (title: string, body: string) => {
   await RequestNotificationAuthorization()
   await SendNotification({ id: sampleID(), title, body })
 }
+
+export const CleanupNetworkAfterStop = async () => {
+  const { flag, data } = await Bridge.CleanupNetworkAfterStop()
+  if (!flag) {
+    throw data || 'CleanupNetworkAfterStop failed'
+  }
+  return data
+}
+

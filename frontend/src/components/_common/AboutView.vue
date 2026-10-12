@@ -79,7 +79,7 @@ defineExpose({
 
 <template>
   <div class="flex flex-col items-center py-12">
-    <img :src="logo" class="w-64" draggable="false" />
+    <img :src="logo" class="empty-mark" draggable="false" alt="" />
     <div class="py-8 font-bold">{{ APP_TITLE }}</div>
     <div class="text-12 pb-8">{{ t('about.credit') }}</div>
     <div class="flex items-center">
