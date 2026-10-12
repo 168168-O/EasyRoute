@@ -1,9 +1,10 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 import { IsStartup } from '@/bridge'
 import { OS } from '@/enums/app'
 import * as Stores from '@/stores'
 import { CheckPermissions, SwitchPermissions, message, sleep } from '@/utils'
+import { pushScreenshotHotkeys, scheduleScreenshotHotkeys } from '@/utils/screenshotHotkeys'
 
 const MIN_SPLASH_DURATION = 1000
 
@@ -60,7 +61,20 @@ export const useAppBootstrap = () => {
 
     loading.value = false
     kernelApiStore.initCoreState()
+    void pushScreenshotHotkeys()
   }
+
+  watch(
+    () => [
+      appSettings.app.screenshotHotkey,
+      appSettings.app.screenshotTranslateHotkey,
+      appSettings.app.deepseekApiKey,
+      kernelApiStore.running,
+      kernelApiStore.config['mixed-port'],
+      kernelApiStore.config.port,
+    ],
+    () => scheduleScreenshotHotkeys(),
+  )
 
   initialize().catch(showError)
 

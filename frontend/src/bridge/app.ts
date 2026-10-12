@@ -97,6 +97,16 @@ export const BackgroundVideoURL = async () => {
   return data as string
 }
 
+export const ApplyScreenshotHotkeys = async (
+  shot: string,
+  translate: string,
+  deepseekKey = '',
+  coreProxy = '',
+) => {
+  const { flag, data } = await Bridge.ApplyScreenshotHotkeys(shot, translate, deepseekKey, coreProxy)
+  return { flag: !!flag, data: data || '' }
+}
+
 export const Translate = async (text: string, target: string, coreProxy = '') => {
   const { flag, data } = await Bridge.Translate(text, target, coreProxy)
   if (!flag) throw data

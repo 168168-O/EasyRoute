@@ -99,6 +99,12 @@ declare namespace App {
     autoRestartKernel: boolean
     /** User-facing TUN switch. False stays off across core restarts. */
     tunEnabled: boolean
+    /** Screenshot region hotkey. Empty turns it off. */
+    screenshotHotkey: string
+    /** Screenshot translate hotkey. Empty turns it off. */
+    screenshotTranslateHotkey: string
+    /** Optional DeepSeek key used only by screenshot translation. */
+    deepseekApiKey: string
     userAgent: string
     startupDelay: number
     connections: {

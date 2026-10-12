@@ -85,6 +85,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     preferRunAsAdmin: true,
     autoRestartKernel: false,
     tunEnabled: true,
+    screenshotHotkey: 'Ctrl+Alt+A',
+    screenshotTranslateHotkey: 'Ctrl+Alt+T',
+    deepseekApiKey: '',
     userAgent: '',
     startupDelay: 30,
     connections: DefaultConnections(),
@@ -217,6 +220,9 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     if (!Array.isArray(settings.translateHistory)) settings.translateHistory = []
     settings.translateHistory = settings.translateHistory.slice(0, 20)
     if (settings.tunEnabled === undefined) settings.tunEnabled = true
+    if (settings.screenshotHotkey === undefined) settings.screenshotHotkey = 'Ctrl+Alt+A'
+    if (settings.screenshotTranslateHotkey === undefined) settings.screenshotTranslateHotkey = 'Ctrl+Alt+T'
+    if (settings.deepseekApiKey === undefined) settings.deepseekApiKey = ''
 
     app.value = settings
     latestUserSettings = stringify(app.value)

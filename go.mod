@@ -8,6 +8,7 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/wailsapp/wails/v2 v2.15.0
+	github.com/zn-chen/sysocr v0.0.0-20260203092347-713d6d1a7997
 	golang.org/x/sys v0.47.0
 	gopkg.in/yaml.v3 v3.0.1
 )

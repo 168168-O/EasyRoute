@@ -1,7 +1,9 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import { ExitApp } from '@/bridge'
+import { localHotkeyWarning } from '@/utils/hotkeyConflict'
+import { screenshotHotkeyWarning } from '@/utils/screenshotHotkeys'
 import { WebviewGpuPolicyOptions, WindowStateOptions } from '@/constant/app'
 import { OS } from '@/enums/app'
 import { useAppSettingsStore, useEnvStore } from '@/stores'
@@ -18,6 +20,15 @@ import {
 
 const appSettings = useAppSettingsStore()
 const envStore = useEnvStore()
+
+const hotkeyWarn = computed(() => {
+  const local = localHotkeyWarning(
+    String(appSettings.app.screenshotHotkey || ''),
+    String(appSettings.app.screenshotTranslateHotkey || ''),
+  )
+  const remote = screenshotHotkeyWarning.value
+  return [local, remote].filter((item, index, all) => item && all.indexOf(item) === index).join('\n')
+})
 
 const isAdmin = ref(false)
 const isAutoStart = ref(false)
@@ -163,5 +174,80 @@ if (envStore.env.os === OS.Windows) {
       <div class="text-16 font-bold">{{ $t('settings.addGroupToMenu') }}</div>
       <Switch v-model="appSettings.app.addGroupToMenu" />
     </div>
+    <div v-platform="[OS.Windows]" class="px-8 py-12 flex items-center justify-between gap-16">
+      <div class="text-16 font-bold">
+        {{ $t('settings.screenshot.hotkey') }}
+        <div class="shot-tip">{{ $t('settings.screenshot.hotkeyTips') }}</div>
+      </div>
+      <input
+        v-model="appSettings.app.screenshotHotkey"
+        class="shot-field"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="Ctrl+Alt+A"
+      />
+    </div>
+    <div v-platform="[OS.Windows]" class="px-8 py-12 flex items-center justify-between gap-16">
+      <div class="text-16 font-bold">
+        {{ $t('settings.screenshot.translateHotkey') }}
+        <div class="shot-tip">{{ $t('settings.screenshot.translateHotkeyTips') }}</div>
+      </div>
+      <input
+        v-model="appSettings.app.screenshotTranslateHotkey"
+        class="shot-field"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="Ctrl+Alt+T"
+      />
+    </div>
+    <p v-if="hotkeyWarn" v-platform="[OS.Windows]" class="shot-warn">{{ hotkeyWarn }}</p>
+    <div v-platform="[OS.Windows]" class="px-8 py-12 flex items-center justify-between gap-16">
+      <div class="text-16 font-bold">
+        {{ $t('settings.screenshot.deepseek') }}
+        <div class="shot-tip">{{ $t('settings.screenshot.deepseekTips') }}</div>
+      </div>
+      <input
+        v-model="appSettings.app.deepseekApiKey"
+        class="shot-field"
+        type="password"
+        spellcheck="false"
+        autocomplete="off"
+        placeholder="sk-"
+      />
+    </div>
   </Card>
 </template>
+
+<style scoped>
+.shot-tip {
+  margin-top: 4px;
+  max-width: 460px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: rgba(159, 214, 255, 0.82);
+}
+.shot-field {
+  width: 210px;
+  height: 32px;
+  flex: none;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(232, 213, 163, 0.55);
+  background: rgba(6, 20, 40, 0.55);
+  color: #f6f1e6;
+  font-size: 13px;
+  outline: none;
+}
+.shot-field:focus {
+  border-color: rgba(159, 214, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(159, 214, 255, 0.35);
+}
+.shot-warn {
+  margin: 0 8px 12px;
+  color: #e7c98a;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+</style>

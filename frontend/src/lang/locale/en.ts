@@ -731,6 +731,14 @@ export default {
     systemProxyDNS: 'DNS While Core Is Running',
     systemDefaultDNS: 'DNS While Core Is Stopped',
     autoStartKernel: 'Start core on launch',
+    screenshot: {
+      hotkey: 'Screenshot hotkey',
+      hotkeyTips: 'Default Ctrl+Alt+A. Select a region, then copy, save, or pin it. A pin stays on top, snaps to screen edges, zooms with the wheel, changes opacity with Ctrl+wheel, and closes on double-click or Esc. Right-click to copy, save, or translate.',
+      translateHotkey: 'Screenshot translate hotkey',
+      translateHotkeyTips: 'Default Ctrl+Alt+T. Select English text to see the original and a Chinese translation.',
+      deepseek: 'DeepSeek key',
+      deepseekTips: 'Optional. Screenshot translation uses DeepSeek when this is set; otherwise Google through the VPN, or MyMemory when the VPN is off.',
+    },
     realMemoryUsage: 'Show actual core memory usage',
     autoRestartKernel: {
       name: 'Auto-restart core on config changes',
