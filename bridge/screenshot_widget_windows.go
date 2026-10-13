@@ -352,10 +352,16 @@ func paintFloatWidget(hdc uintptr) {
 	if w.bull != 0 {
 		drawPremul(hdc, w.bull, w.bullW, w.bullH, lay.Bull.X, lay.Bull.Y, lay.Bull.W, lay.Bull.H)
 	}
-	drawTextBox(hdc, "截图", 70, 14, 230, 26, dtSingleLine|dtVCenter|dtNoPrefix, colorRef(232, 213, 163))
-	drawTextBox(hdc, "一直浮在桌面最前面", 70, 40, 250, 22, dtSingleLine|dtVCenter|dtNoPrefix, colorRef(159, 214, 255))
+	titleW := lay.Pin.X - 78
+	if titleW < 80 {
+		titleW = 80
+	}
+	drawTextBox(hdc, "截图", 70, 14, titleW, 26, dtSingleLine|dtVCenter|dtNoPrefix, colorRef(232, 213, 163))
+	drawTextBox(hdc, "一直浮在桌面最前面", 70, 40, titleW, 22, dtSingleLine|dtVCenter|dtNoPrefix, colorRef(159, 214, 255))
 	paintGlassButton(hdc, lay.Pin, colorRef(159, 214, 255), w.acrylic)
 	drawTextBox(hdc, "置顶", lay.Pin.X, lay.Pin.Y, lay.Pin.W, lay.Pin.H, dtCenter|dtVCenter|dtSingleLine|dtNoPrefix, colorRef(159, 214, 255))
+	paintGlassButton(hdc, lay.Close, colorRef(232, 213, 163), w.acrylic)
+	drawTextBox(hdc, "关闭", lay.Close.X, lay.Close.Y, lay.Close.W, lay.Close.H, dtCenter|dtVCenter|dtSingleLine|dtNoPrefix, colorRef(246, 241, 230))
 	paintWidgetButton(hdc, lay.Shot, "截图", widgetHotkeyLabel(w.shotHotkey, "Ctrl+Alt+A"), colorRef(159, 214, 255), w)
 	paintWidgetButton(hdc, lay.Translate, "截图翻译", widgetHotkeyLabel(w.trHotkey, "Ctrl+Alt+T"), colorRef(232, 213, 163), w)
 }
@@ -394,6 +400,9 @@ func onWidgetLeftDown(hwnd uintptr) {
 	case lay.Translate.contains(x, y):
 		liveWidget.drag = false
 		beginCapture(modeTranslate)
+	case lay.Close.contains(x, y):
+		liveWidget.drag = false
+		destroyWindow.Call(hwnd)
 	case lay.Pin.contains(x, y):
 		showFloatWidget()
 	default:

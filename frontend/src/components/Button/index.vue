@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { computed, useAttrs } from 'vue'
-
-import bull from '@/assets/bull-crystal.webp'
 import { type IconName } from '@/components/Icon/icons'
 
 interface Props {
@@ -26,16 +23,6 @@ const props = withDefaults(defineProps<Props>(), {
   role: 'button',
 })
 
-const attrs = useAttrs()
-
-/** Window chrome keeps close / minimise glyphs. Every other button icon is the bull head. */
-const showBull = computed(() => {
-  const raw = attrs.class
-  const text = Array.isArray(raw) ? raw.map((part) => String(part)).join(' ') : String(raw ?? '')
-  return !text.split(/\s+/).includes('window-control')
-})
-
-const bullSize = computed(() => props.iconSize ?? (props.size === 'small' ? 14 : 16))
 </script>
 
 <template>
@@ -59,17 +46,8 @@ const bullSize = computed(() => props.iconSize ?? (props.size === 'small' ? 14 :
         icon="forbidden"
         class="pointer-events-none shrink-0 mr-4"
       />
-      <img
-        v-if="icon && showBull"
-        :src="bull"
-        alt=""
-        draggable="false"
-        class="bull-ico"
-        :class="$slots.default ? 'mr-4' : ''"
-        :style="{ width: bullSize + 'px', height: bullSize + 'px' }"
-      />
       <Icon
-        v-else-if="icon"
+        v-if="icon"
         :icon="icon"
         :size="iconSize"
         :color="iconColor || 'currentColor'"
@@ -139,12 +117,5 @@ const bullSize = computed(() => props.iconSize ?? (props.size === 'small' ? 14 :
 .large {
   padding: 8px 12px;
   font-size: 16px;
-}
-
-.bull-ico {
-  flex: none;
-  object-fit: contain;
-  pointer-events: none;
-  border-radius: 4px;
 }
 </style>

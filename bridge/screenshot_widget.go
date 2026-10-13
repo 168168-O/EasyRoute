@@ -35,16 +35,18 @@ func (b pxBox) overlaps(o pxBox) bool {
 }
 
 type floatWidgetLayout struct {
-	Bull, Pin, Shot, Translate pxBox
+	Bull, Pin, Close, Shot, Translate pxBox
 }
 
 // layoutFloatWidget places the always-on-top desktop widget.
-// Shot is Ctrl+Alt+A. Translate is Ctrl+Alt+T. Both stay visible without opening the main window.
+// Shot is Ctrl+Alt+A. Translate is Ctrl+Alt+T. Close is the 关闭 button.
 func layoutFloatWidget(w, h int32) floatWidgetLayout {
 	_ = h
+	closeBox := pxBox{w - 12 - 72, 14, 72, 32}
 	return floatWidgetLayout{
 		Bull:      pxBox{16, 16, 44, 44},
-		Pin:       pxBox{w - 16 - 72, 18, 72, 30},
+		Pin:       pxBox{closeBox.X - 8 - 64, 14, 64, 32},
+		Close:     closeBox,
 		Shot:      pxBox{16, 78, w - 32, 108},
 		Translate: pxBox{16, 198, w - 32, 108},
 	}
@@ -66,6 +68,7 @@ func desktopWidgetText(shot, translate string) string {
 		"截图",
 		"一直浮在桌面最前面",
 		"置顶",
+		"关闭",
 		"截图",
 		shot,
 		"截图翻译",

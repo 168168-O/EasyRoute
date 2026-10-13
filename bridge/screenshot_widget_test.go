@@ -10,7 +10,7 @@ import (
 
 func TestDesktopWidgetChrome(t *testing.T) {
 	text := desktopWidgetText("Ctrl+Alt+A", "Ctrl+Alt+T")
-	for _, want := range []string{"截图", "截图翻译", "置顶", "一直浮在桌面最前面", "Ctrl+Alt+A", "Ctrl+Alt+T"} {
+	for _, want := range []string{"截图", "截图翻译", "置顶", "关闭", "一直浮在桌面最前面", "Ctrl+Alt+A", "Ctrl+Alt+T"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("missing %q in %q", want, text)
 		}
@@ -56,8 +56,11 @@ func TestTranslateResultChromeHasNoHistory(t *testing.T) {
 
 func TestFloatWidgetLayout(t *testing.T) {
 	lay := layoutFloatWidget(floatWidgetW, floatWidgetH)
-	if lay.Shot.overlaps(lay.Translate) || lay.Pin.overlaps(lay.Shot) || lay.Pin.overlaps(lay.Translate) {
+	if lay.Shot.overlaps(lay.Translate) || lay.Pin.overlaps(lay.Shot) || lay.Pin.overlaps(lay.Translate) || lay.Close.overlaps(lay.Pin) || lay.Close.overlaps(lay.Shot) {
 		t.Fatalf("overlap %+v", lay)
+	}
+	if lay.Close.W < 64 || lay.Close.X+lay.Close.W > floatWidgetW || lay.Close.Y < 0 {
+		t.Fatalf("close button %+v", lay.Close)
 	}
 	if lay.Shot.W < 300 || lay.Translate.H < 80 {
 		t.Fatalf("buttons too small %+v", lay)

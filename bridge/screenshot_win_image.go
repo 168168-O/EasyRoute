@@ -7,6 +7,7 @@ import (
 	"errors"
 	"image"
 	"image/png"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -33,6 +34,8 @@ const (
 	ofnNoChangeDir     = 0x00000008
 )
 
+var gdiFlush = gdi32.NewProc("GdiFlush")
+
 func captureVirtual() (*overlay, error) {
 	vx := int32(call(getSystemMetrics, smXVirtualScreen))
 	vy := int32(call(getSystemMetrics, smYVirtualScreen))
@@ -47,39 +50,35 @@ func captureVirtual() (*overlay, error) {
 	}
 	defer releaseDC.Call(0, screen)
 	mem := call(createCompatibleDC, screen)
-	bmp := call(createCompatibleBitmap, screen, uintptr(vw), uintptr(vh))
-	if mem == 0 || bmp == 0 {
-		if bmp != 0 {
-			deleteObject.Call(bmp)
-		}
-		if mem != 0 {
-			deleteDC.Call(mem)
-		}
+	if mem == 0 {
+		return nil, errors.New("创建截图失败")
+	}
+	bmp, bits := screenDIB(screen, vw, vh)
+	if bmp == 0 {
+		bmp = call(createCompatibleBitmap, screen, uintptr(vw), uintptr(vh))
+	}
+	if bmp == 0 {
+		deleteDC.Call(mem)
 		return nil, errors.New("创建截图失败")
 	}
 	old := call(selectObject, mem, bmp)
-	if call(bitBlt, mem, 0, 0, uintptr(vw), uintptr(vh), screen, uintptr(vx), uintptr(vy), srcCopy|captureBlt) == 0 {
+	if !blitScreen(mem, screen, vw, vh, vx, vy) {
 		selectObject.Call(mem, old)
 		deleteObject.Call(bmp)
 		deleteDC.Call(mem)
+		log.Printf("screenshot blit: %v", windows.GetLastError())
 		return nil, errors.New("截取屏幕失败")
 	}
-	hdr := bitmapInfoHeader{
-		BiSize:      40,
-		BiWidth:     vw,
-		BiHeight:    -vh,
-		BiPlanes:    1,
-		BiBitCount:  32,
-		BiSizeImage: uint32(vw * vh * 4),
-	}
-	px := make([]byte, int(vw)*int(vh)*4)
-	lines := call(getDIBits, mem, bmp, 0, uintptr(vh), uintptr(unsafe.Pointer(&px[0])), uintptr(unsafe.Pointer(&hdr)), dibRGBColors)
-	if lines == 0 {
+	px := copyScreenPixels(bits, bmp, mem, old, vw, vh)
+	if px == nil {
 		selectObject.Call(mem, old)
 		deleteObject.Call(bmp)
 		deleteDC.Call(mem)
+		log.Printf("screenshot pixels: %v", windows.GetLastError())
 		return nil, errors.New("读取屏幕像素失败")
 	}
+	// The region overlay paints from this selected bitmap.
+	selectObject.Call(mem, bmp)
 	return &overlay{
 		hdcMem: mem,
 		bmp:    bmp,
@@ -90,6 +89,56 @@ func captureVirtual() (*overlay, error) {
 		vh:     vh,
 		px:     px,
 	}, nil
+}
+
+// screenDIB is a top-down 32-bit section. GetDIBits fails on a bitmap that is
+// still selected into a DC, which is what the old compatible-bitmap path did.
+func screenDIB(hdc uintptr, w, h int32) (uintptr, unsafe.Pointer) {
+	hdr := bitmapInfoHeader{
+		BiSize: 40, BiWidth: w, BiHeight: -h, BiPlanes: 1, BiBitCount: 32,
+		BiCompression: biRGB, BiSizeImage: uint32(int(w) * int(h) * 4),
+	}
+	var bits unsafe.Pointer
+	bmp := call(createDIBSection, hdc, uintptr(unsafe.Pointer(&hdr)), dibRGBColors, uintptr(unsafe.Pointer(&bits)), 0, 0)
+	if bmp == 0 || bits == nil {
+		if bmp != 0 {
+			deleteObject.Call(bmp)
+		}
+		return 0, nil
+	}
+	return bmp, bits
+}
+
+func blitScreen(dst, src uintptr, w, h, x, y int32) bool {
+	if call(bitBlt, dst, 0, 0, uintptr(w), uintptr(h), src, uintptr(x), uintptr(y), srcCopy|captureBlt) != 0 {
+		return true
+	}
+	return call(bitBlt, dst, 0, 0, uintptr(w), uintptr(h), src, uintptr(x), uintptr(y), srcCopy) != 0
+}
+
+func copyScreenPixels(bits unsafe.Pointer, bmp, mem, old uintptr, w, h int32) []byte {
+	n := int(w) * int(h) * 4
+	if n <= 0 {
+		return nil
+	}
+	if bits != nil {
+		gdiFlush.Call()
+		px := make([]byte, n)
+		copy(px, unsafe.Slice((*byte)(bits), n))
+		return px
+	}
+	// Fallback: a selected bitmap cannot be read. Deselect, then GetDIBits.
+	selectObject.Call(mem, old)
+	hdr := bitmapInfoHeader{
+		BiSize: 40, BiWidth: w, BiHeight: -h, BiPlanes: 1, BiBitCount: 32,
+		BiCompression: biRGB, BiSizeImage: uint32(n),
+	}
+	px := make([]byte, n)
+	lines := call(getDIBits, mem, bmp, 0, uintptr(h), uintptr(unsafe.Pointer(&px[0])), uintptr(unsafe.Pointer(&hdr)), dibRGBColors)
+	if lines == 0 {
+		return nil
+	}
+	return px
 }
 
 func freeOverlayGDI(ov *overlay) {
