@@ -28,6 +28,13 @@ export const migrateAppSettings = (settings: Record<string, any>, existed: boole
   }
   if (settings.simpleMode === undefined) settings.simpleMode = true
   if (settings.domesticDirect === undefined) settings.domesticDirect = true
+  // First launch after this update prefers the system proxy and leaves TUN off.
+  // A later choice to turn TUN on is kept.
+  if (!existed || settings.preferSystemProxyDefaulted !== true) {
+    settings.tunEnabled = false
+    settings.autoSetSystemProxy = true
+    settings.preferSystemProxyDefaulted = true
+  }
   applyGlassBullBaseline(settings)
   return settings
 }

@@ -10,10 +10,13 @@ import (
 
 func TestDesktopWidgetChrome(t *testing.T) {
 	text := desktopWidgetText("Ctrl+Alt+A", "Ctrl+Alt+T")
-	for _, want := range []string{"截图", "截图翻译", "置顶", "关闭", "一直浮在桌面最前面", "Ctrl+Alt+A", "Ctrl+Alt+T"} {
+	for _, want := range []string{"截图", "截图翻译", "置顶", "关闭", "Ctrl+Alt+A", "Ctrl+Alt+T"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("missing %q in %q", want, text)
 		}
+	}
+	if strings.Contains(text, "一直浮在桌面最前面") {
+		t.Fatalf("subtitle leaked into widget: %s", text)
 	}
 	if containsRecentHistory(text) {
 		t.Fatalf("history leaked into widget: %s", text)
@@ -62,8 +65,14 @@ func TestFloatWidgetLayout(t *testing.T) {
 	if lay.Close.W < 64 || lay.Close.X+lay.Close.W > floatWidgetW || lay.Close.Y < 0 {
 		t.Fatalf("close button %+v", lay.Close)
 	}
-	if lay.Shot.W < 300 || lay.Translate.H < 80 {
+	if lay.Shot.Y != lay.Translate.Y || lay.Shot.X+lay.Shot.W > lay.Translate.X {
+		t.Fatalf("cards are not side by side %+v", lay)
+	}
+	if lay.Shot.W < 160 || lay.Translate.W < 160 || lay.Translate.H < 100 {
 		t.Fatalf("buttons too small %+v", lay)
+	}
+	if lay.Shot.Y < lay.Close.Y+lay.Close.H {
+		t.Fatalf("cards cover the header %+v", lay)
 	}
 	if lay.Translate.Y+lay.Translate.H > floatWidgetH {
 		t.Fatalf("translate button outside %+v", lay)
@@ -94,6 +103,9 @@ func TestTranslateResultLayout(t *testing.T) {
 	if lay.CopyChinese.X+lay.CopyChinese.W > translateResultW || lay.Note.Y+lay.Note.H > h {
 		t.Fatalf("outside %+v h=%d", lay, h)
 	}
+	if lay.Close.W < 72 || lay.Close.X+lay.Close.W > translateResultW {
+		t.Fatalf("result close %+v", lay.Close)
+	}
 	plain := layoutTranslateResult(translateResultW, translateResultHeight(0, 0, 40, 40, 760), 0, 0, 40, 40)
 	if plain.Image.W != 0 || plain.ImageLabel.H != 0 {
 		t.Fatalf("unexpected image %+v", plain)
@@ -117,6 +129,32 @@ func TestTranslateResultLayout(t *testing.T) {
 				t.Fatalf("h=%d img=%v text covers image %+v", clientH, img, lay)
 			}
 		}
+	}
+}
+
+func TestCollapseAndStack(t *testing.T) {
+	home := widgetFrame{X: 1000, Y: 700, W: floatWidgetW, H: floatWidgetH}
+	icon := collapseWidgetFrame(home)
+	if !icon.Collapsed || icon.W != collapsedBull || icon.H != collapsedBull {
+		t.Fatalf("icon %+v", icon)
+	}
+	if icon.X != home.X+home.W-collapsedBull || icon.Y != home.Y+home.H-collapsedBull {
+		t.Fatalf("icon parked wrong %+v", icon)
+	}
+	full := expandWidgetFrame(home.X, home.Y)
+	if full.Collapsed || full.W != floatWidgetW || full.H != floatWidgetH || full.X != home.X || full.Y != home.Y {
+		t.Fatalf("expand %+v", full)
+	}
+	if !clickExpandsCollapsed(0, 0) || !clickExpandsCollapsed(3, 1) || clickExpandsCollapsed(4, 0) || clickExpandsCollapsed(-5, 0) {
+		t.Fatal("click threshold")
+	}
+	x, y := stackResultAbove(1000, 800, floatWidgetW, translateResultW, 400, 0, 0, 1920, 1080, false)
+	if x+translateResultW != 1000+floatWidgetW || y != 800-400-10 {
+		t.Fatalf("stack %d %d", x, y)
+	}
+	cx, cy := stackResultAbove(0, 0, 0, translateResultW, 400, 0, 0, 1920, 1080, true)
+	if cx != 1920-translateResultW-20 || cy != 24 {
+		t.Fatalf("collapsed stack %d %d", cx, cy)
 	}
 }
 

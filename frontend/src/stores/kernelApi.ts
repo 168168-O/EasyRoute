@@ -296,8 +296,13 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
       initWebsocket()
       await Promise.all([refreshConfig(), refreshProviderProxies()])
       await envStore.updateSystemProxyStatus()
-    } else if (appSettingsStore.app.autoStartKernel) {
-      await startCore()
+    } else {
+      // A crash can leave TUN routes and a loopback proxy with the core already dead.
+      await CleanupNetworkAfterStop().catch(() => undefined)
+      if (envStore.systemProxy) await envStore.clearSystemProxy().catch(() => undefined)
+      if (appSettingsStore.app.autoStartKernel) {
+        await startCore()
+      }
     }
   }
 
@@ -372,6 +377,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     if (releasing) return
     if (!running.value && corePid.value < 0) {
       coreStoppedResolver(null)
+      await CleanupNetworkAfterStop().catch(() => undefined)
       if (envStore.systemProxy) await envStore.clearSystemProxy().catch(() => undefined)
       return
     }
@@ -489,6 +495,11 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     }
   }
 
+  const restoreNetworkAfterStop = async () => {
+    await CleanupNetworkAfterStop().catch(() => undefined)
+    if (envStore.systemProxy) await envStore.clearSystemProxy().catch(() => undefined)
+  }
+
   const stopCore = async () => {
     const ticket = ++epoch
     const mine = ++stopTicket
@@ -497,6 +508,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     stopping.value = true
     try {
       if (!running.value && corePid.value <= 0) {
+        await CleanupNetworkAfterStop().catch(() => undefined)
         if (envStore.systemProxy) await envStore.clearSystemProxy().catch(() => undefined)
         return
       }
@@ -683,6 +695,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     startCore,
     stopCore,
     restartCore,
+    restoreNetworkAfterStop,
     initCoreState,
     pid: corePid,
     running,

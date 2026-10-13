@@ -386,9 +386,11 @@ export const exitApp = async () => {
   try {
     if (kernelApiStore.running && appSettings.app.closeKernelOnExit) {
       await kernelApiStore.stopCore()
-      if (appSettings.app.autoSetSystemProxy) {
+      if (envStore.systemProxy || appSettings.app.autoSetSystemProxy) {
         await envStore.clearSystemProxy()
       }
+    } else if (!kernelApiStore.running) {
+      await kernelApiStore.restoreNetworkAfterStop()
     }
     await pluginsStore.onShutdownTrigger()
     if (!timedout) {

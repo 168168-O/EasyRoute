@@ -13,8 +13,9 @@ import (
 var bullHeadPNG []byte
 
 const (
-	floatWidgetW     int32 = 420
-	floatWidgetH     int32 = 318
+	floatWidgetW     int32 = 460
+	floatWidgetH     int32 = 236
+	collapsedBull    int32 = 72
 	translateResultW int32 = 560
 )
 
@@ -39,17 +40,89 @@ type floatWidgetLayout struct {
 }
 
 // layoutFloatWidget places the always-on-top desktop widget.
-// Shot is Ctrl+Alt+A. Translate is Ctrl+Alt+T. Close is the 关闭 button.
+// The two cards sit side by side. Shot is Ctrl+Alt+A. Translate is Ctrl+Alt+T.
+// Close is the 关闭 button. Closing collapses to a bull icon; it does not destroy the window.
 func layoutFloatWidget(w, h int32) floatWidgetLayout {
-	_ = h
-	closeBox := pxBox{w - 12 - 72, 14, 72, 32}
-	return floatWidgetLayout{
-		Bull:      pxBox{16, 16, 44, 44},
-		Pin:       pxBox{closeBox.X - 8 - 64, 14, 64, 32},
-		Close:     closeBox,
-		Shot:      pxBox{16, 78, w - 32, 108},
-		Translate: pxBox{16, 198, w - 32, 108},
+	closeBox := pxBox{w - 16 - 72, 12, 72, 32}
+	gap := int32(12)
+	pad := int32(16)
+	cardY := int32(56)
+	cardH := h - cardY - 16
+	if cardH < 100 {
+		cardH = 100
 	}
+	cardW := (w - pad*2 - gap) / 2
+	return floatWidgetLayout{
+		Bull:      pxBox{16, 8, 40, 40},
+		Pin:       pxBox{closeBox.X - 8 - 64, 12, 64, 32},
+		Close:     closeBox,
+		Shot:      pxBox{pad, cardY, cardW, cardH},
+		Translate: pxBox{pad + cardW + gap, cardY, cardW, cardH},
+	}
+}
+
+type widgetFrame struct {
+	X, Y, W, H int32
+	Collapsed  bool
+}
+
+// collapseWidgetFrame parks a small bull at the expanded window's bottom-right.
+func collapseWidgetFrame(cur widgetFrame) widgetFrame {
+	w, h := cur.W, cur.H
+	if w < collapsedBull {
+		w = collapsedBull
+	}
+	if h < collapsedBull {
+		h = collapsedBull
+	}
+	return widgetFrame{
+		X:         cur.X + w - collapsedBull,
+		Y:         cur.Y + h - collapsedBull,
+		W:         collapsedBull,
+		H:         collapsedBull,
+		Collapsed: true,
+	}
+}
+
+// expandWidgetFrame restores the full widget at the last expanded position.
+func expandWidgetFrame(homeX, homeY int32) widgetFrame {
+	return widgetFrame{X: homeX, Y: homeY, W: floatWidgetW, H: floatWidgetH, Collapsed: false}
+}
+
+// clickExpandsCollapsed is a click on the bull icon. A drag of 4px or more moves it instead.
+func clickExpandsCollapsed(dx, dy int32) bool {
+	if dx < 0 {
+		dx = -dx
+	}
+	if dy < 0 {
+		dy = -dy
+	}
+	return dx < 4 && dy < 4
+}
+
+// stackResultAbove places the result window on top of the expanded widget, right edges aligned.
+func stackResultAbove(widgetX, widgetY, widgetW, resultW, resultH, workLeft, workTop, workRight, workBottom int32, collapsed bool) (int32, int32) {
+	var x, y int32
+	if !collapsed && widgetW > 0 {
+		x = widgetX + widgetW - resultW
+		y = widgetY - resultH - 10
+	} else {
+		x = workRight - resultW - 20
+		y = workTop + 24
+	}
+	if x+resultW > workRight-8 {
+		x = workRight - resultW - 8
+	}
+	if y+resultH > workBottom-8 {
+		y = workBottom - resultH - 8
+	}
+	if x < workLeft+8 {
+		x = workLeft + 8
+	}
+	if y < workTop+8 {
+		y = workTop + 8
+	}
+	return x, y
 }
 
 func widgetHotkeyLabel(raw, fallback string) string {
@@ -66,7 +139,6 @@ func desktopWidgetText(shot, translate string) string {
 	translate = widgetHotkeyLabel(translate, "Ctrl+Alt+T")
 	return strings.Join([]string{
 		"截图",
-		"一直浮在桌面最前面",
 		"置顶",
 		"关闭",
 		"截图",
@@ -216,8 +288,8 @@ func layoutTranslateResult(clientW, clientH, imgW, imgH, originalH, chineseH int
 	if clientH < 300 {
 		clientH = 300
 	}
-	lay.Close = pxBox{clientW - 72, 12, 56, 28}
-	lay.Pin = pxBox{lay.Close.X - 72, 12, 64, 28}
+	lay.Close = pxBox{clientW - 16 - 72, 12, 72, 32}
+	lay.Pin = pxBox{lay.Close.X - 8 - 64, 12, 64, 32}
 	lay.Note = pxBox{16, clientH - 32, clientW - 32, 20}
 	btnY := lay.Note.Y - 8 - 42
 	gap := int32(10)

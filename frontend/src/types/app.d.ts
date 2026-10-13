@@ -75,6 +75,8 @@ declare namespace App {
     exitOnCloseMigrated?: boolean
     sortByDelayDefaulted?: boolean
     addGroupToMenuDefaulted?: boolean
+    /** Set once when the install is moved to system-proxy-by-default. */
+    preferSystemProxyDefaulted?: boolean
     translateHistory: {
       id: string
       input: string

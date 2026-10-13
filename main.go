@@ -107,4 +107,8 @@ func main() {
 	if err != nil {
 		println("Error:", err.Error())
 	}
+	// Crash or quit after the core is already gone: drop leftover TUN routes.
+	if !bridge.SingBoxCoreRunning() {
+		app.CleanupNetworkAfterStop()
+	}
 }

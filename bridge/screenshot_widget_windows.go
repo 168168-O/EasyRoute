@@ -57,7 +57,11 @@ type floatWidget struct {
 	hwnd                 uintptr
 	acrylic              bool
 	drag                 bool
+	collapsed            bool
+	dragMoved            bool
 	offX, offY           int32
+	pressX, pressY       int32
+	homeX, homeY         int32
 	shotHotkey, trHotkey string
 	bull                 uintptr
 	bullW, bullH         int32
@@ -104,7 +108,7 @@ func createFloatWidget() error {
 		setWindowText.Call(hwnd, uintptr(unsafe.Pointer(title)))
 	}
 	roundWindowCorners(hwnd)
-	w := &floatWidget{hwnd: hwnd, shotHotkey: "Ctrl+Alt+A", trHotkey: "Ctrl+Alt+T", acrylic: enableAcrylic(hwnd)}
+	w := &floatWidget{hwnd: hwnd, shotHotkey: "Ctrl+Alt+A", trHotkey: "Ctrl+Alt+T", acrylic: enableAcrylic(hwnd), homeX: x, homeY: y}
 	if px, bw, bh, err := decodePremulBGRA(bullHeadPNG); err == nil {
 		w.bullW, w.bullH = bw, bh
 		w.bull = dibFromPremul(px, bw, bh)
@@ -220,19 +224,57 @@ func resultMaxHeight() int32 {
 
 func resultOrigin(w, h int32) (int32, int32) {
 	work := primaryWorkArea()
-	x := work.Right - w - 20
-	y := work.Top + 24
-	limit := work.Bottom - floatWidgetH - 28
-	if y+h > limit && limit-h > work.Top {
-		y = limit - h
+	collapsed := true
+	var wx, wy, ww int32
+	if liveWidget != nil && liveWidget.hwnd != 0 && !liveWidget.collapsed {
+		var rc rect
+		r1, _, _ := getWindowRect.Call(liveWidget.hwnd, uintptr(unsafe.Pointer(&rc)))
+		if r1 != 0 {
+			collapsed = false
+			wx, wy = rc.Left, rc.Top
+			ww = rc.Right - rc.Left
+		}
 	}
-	if x < work.Left+8 {
-		x = work.Left + 8
+	return stackResultAbove(wx, wy, ww, w, h, work.Left, work.Top, work.Right, work.Bottom, collapsed)
+}
+
+func placeWidget(x, y, w, h int32) {
+	if liveWidget == nil || liveWidget.hwnd == 0 {
+		return
 	}
-	if y < work.Top+8 {
-		y = work.Top + 8
+	setWindowPos.Call(liveWidget.hwnd, hwndTopmost, uintptr(x), uintptr(y), uintptr(w), uintptr(h), swpNoActivate|swpShow)
+	invalidateRect.Call(liveWidget.hwnd, 0, 1)
+}
+
+func collapseFloatWidget() {
+	w := liveWidget
+	if w == nil || w.hwnd == 0 || w.collapsed {
+		return
 	}
-	return x, y
+	var rc rect
+	getWindowRect.Call(w.hwnd, uintptr(unsafe.Pointer(&rc)))
+	ww, hh := rc.Right-rc.Left, rc.Bottom-rc.Top
+	if ww < collapsedBull {
+		ww = floatWidgetW
+	}
+	if hh < collapsedBull {
+		hh = floatWidgetH
+	}
+	w.homeX, w.homeY = rc.Left, rc.Top
+	frame := collapseWidgetFrame(widgetFrame{X: rc.Left, Y: rc.Top, W: ww, H: hh})
+	w.collapsed = true
+	w.drag = false
+	placeWidget(frame.X, frame.Y, frame.W, frame.H)
+}
+
+func expandFloatWidget() {
+	w := liveWidget
+	if w == nil || w.hwnd == 0 || !w.collapsed {
+		return
+	}
+	w.collapsed = false
+	w.drag = false
+	placeWidget(w.homeX, w.homeY, floatWidgetW, floatWidgetH)
 }
 
 func primaryWorkArea() rect {
@@ -342,9 +384,20 @@ func paintGlassButton(hdc uintptr, b pxBox, border uintptr, acrylic bool) {
 	strokeRect(hdc, b.X, b.Y, b.W, b.H, border, 1)
 }
 
+func paintCollapsedWidget(hdc uintptr, w *floatWidget) {
+	paintGlassChrome(hdc, collapsedBull, collapsedBull, w.acrylic)
+	if w.bull != 0 {
+		drawPremul(hdc, w.bull, w.bullW, w.bullH, 8, 8, collapsedBull-16, collapsedBull-16)
+	}
+}
+
 func paintFloatWidget(hdc uintptr) {
 	w := liveWidget
 	if w == nil {
+		return
+	}
+	if w.collapsed {
+		paintCollapsedWidget(hdc, w)
 		return
 	}
 	paintGlassChrome(hdc, floatWidgetW, floatWidgetH, w.acrylic)
@@ -352,12 +405,11 @@ func paintFloatWidget(hdc uintptr) {
 	if w.bull != 0 {
 		drawPremul(hdc, w.bull, w.bullW, w.bullH, lay.Bull.X, lay.Bull.Y, lay.Bull.W, lay.Bull.H)
 	}
-	titleW := lay.Pin.X - 78
+	titleW := lay.Pin.X - 64
 	if titleW < 80 {
 		titleW = 80
 	}
-	drawTextBox(hdc, "截图", 70, 14, titleW, 26, dtSingleLine|dtVCenter|dtNoPrefix, colorRef(232, 213, 163))
-	drawTextBox(hdc, "一直浮在桌面最前面", 70, 40, titleW, 22, dtSingleLine|dtVCenter|dtNoPrefix, colorRef(159, 214, 255))
+	drawTextBox(hdc, "截图", 64, 12, titleW, 32, dtSingleLine|dtVCenter|dtNoPrefix, colorRef(232, 213, 163))
 	paintGlassButton(hdc, lay.Pin, colorRef(159, 214, 255), w.acrylic)
 	drawTextBox(hdc, "置顶", lay.Pin.X, lay.Pin.Y, lay.Pin.W, lay.Pin.H, dtCenter|dtVCenter|dtSingleLine|dtNoPrefix, colorRef(159, 214, 255))
 	paintGlassButton(hdc, lay.Close, colorRef(232, 213, 163), w.acrylic)
@@ -380,15 +432,38 @@ func paintCopyButton(hdc uintptr, b pxBox, label string, border uintptr, acrylic
 
 func paintWidgetButton(hdc uintptr, b pxBox, title, hotkey string, border uintptr, w *floatWidget) {
 	paintGlassButton(hdc, b, border, w.acrylic)
+	bull := int32(48)
 	if w.bull != 0 {
-		drawPremul(hdc, w.bull, w.bullW, w.bullH, b.X+16, b.Y+(b.H-52)/2, 52, 52)
+		drawPremul(hdc, w.bull, w.bullW, w.bullH, b.X+(b.W-bull)/2, b.Y+16, bull, bull)
 	}
-	drawTextBox(hdc, title, b.X+80, b.Y+18, b.W-100, 36, dtSingleLine|dtVCenter|dtNoPrefix, colorRef(246, 241, 230))
-	drawTextBox(hdc, hotkey, b.X+80, b.Y+54, b.W-100, 28, dtSingleLine|dtVCenter|dtNoPrefix, colorRef(159, 214, 255))
+	titleY := b.Y + 16 + bull + 8
+	drawTextBox(hdc, title, b.X+8, titleY, b.W-16, 32, dtCenter|dtSingleLine|dtNoPrefix, colorRef(246, 241, 230))
+	drawTextBox(hdc, hotkey, b.X+8, titleY+32, b.W-16, 24, dtCenter|dtSingleLine|dtNoPrefix, colorRef(159, 214, 255))
+}
+
+func beginWidgetDrag(hwnd uintptr) {
+	w := liveWidget
+	if w == nil {
+		return
+	}
+	var pt point
+	getCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
+	var rc rect
+	getWindowRect.Call(hwnd, uintptr(unsafe.Pointer(&rc)))
+	w.drag = true
+	w.dragMoved = false
+	w.pressX, w.pressY = pt.X, pt.Y
+	w.offX = pt.X - rc.Left
+	w.offY = pt.Y - rc.Top
+	setCapture.Call(hwnd)
 }
 
 func onWidgetLeftDown(hwnd uintptr) {
 	if liveWidget == nil {
+		return
+	}
+	if liveWidget.collapsed {
+		beginWidgetDrag(hwnd)
 		return
 	}
 	x, y := clientCursor(hwnd)
@@ -402,18 +477,11 @@ func onWidgetLeftDown(hwnd uintptr) {
 		beginCapture(modeTranslate)
 	case lay.Close.contains(x, y):
 		liveWidget.drag = false
-		destroyWindow.Call(hwnd)
+		collapseFloatWidget()
 	case lay.Pin.contains(x, y):
 		showFloatWidget()
 	default:
-		var pt point
-		getCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
-		var rc rect
-		getWindowRect.Call(hwnd, uintptr(unsafe.Pointer(&rc)))
-		liveWidget.drag = true
-		liveWidget.offX = pt.X - rc.Left
-		liveWidget.offY = pt.Y - rc.Top
-		setCapture.Call(hwnd)
+		beginWidgetDrag(hwnd)
 	}
 }
 
@@ -424,6 +492,9 @@ func onWidgetMouseMove(hwnd uintptr) {
 	}
 	var pt point
 	getCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
+	if !clickExpandsCollapsed(pt.X-w.pressX, pt.Y-w.pressY) {
+		w.dragMoved = true
+	}
 	x, y := pt.X-w.offX, pt.Y-w.offY
 	var rc rect
 	getWindowRect.Call(hwnd, uintptr(unsafe.Pointer(&rc)))
@@ -433,11 +504,26 @@ func onWidgetMouseMove(hwnd uintptr) {
 }
 
 func onWidgetLeftUp(hwnd uintptr) {
-	if liveWidget == nil || liveWidget.hwnd != hwnd || !liveWidget.drag {
+	w := liveWidget
+	if w == nil || w.hwnd != hwnd || !w.drag {
 		return
 	}
-	liveWidget.drag = false
+	moved := w.dragMoved
+	collapsed := w.collapsed
+	w.drag = false
+	w.dragMoved = false
 	releaseCapture.Call()
+	if collapsed {
+		if !moved {
+			expandFloatWidget()
+		}
+		return
+	}
+	var rc rect
+	r1, _, _ := getWindowRect.Call(hwnd, uintptr(unsafe.Pointer(&rc)))
+	if r1 != 0 {
+		w.homeX, w.homeY = rc.Left, rc.Top
+	}
 }
 
 func releaseResult(r *resultWindow) {
@@ -524,8 +610,8 @@ func paintTranslateResult(hdc uintptr) {
 	drawTextBox(hdc, "截图翻译", 52, 10, lay.Pin.X-60, 30, dtSingleLine|dtVCenter|dtNoPrefix, colorRef(232, 213, 163))
 	paintGlassButton(hdc, lay.Pin, colorRef(159, 214, 255), r.acrylic)
 	drawTextBox(hdc, "置顶", lay.Pin.X, lay.Pin.Y, lay.Pin.W, lay.Pin.H, dtCenter|dtVCenter|dtSingleLine|dtNoPrefix, colorRef(159, 214, 255))
-	paintGlassButton(hdc, lay.Close, colorRef(159, 214, 255), r.acrylic)
-	drawTextBox(hdc, "关闭", lay.Close.X, lay.Close.Y, lay.Close.W, lay.Close.H, dtCenter|dtVCenter|dtSingleLine|dtNoPrefix, colorRef(159, 214, 255))
+	paintGlassButton(hdc, lay.Close, colorRef(232, 213, 163), r.acrylic)
+	drawTextBox(hdc, "关闭", lay.Close.X, lay.Close.Y, lay.Close.W, lay.Close.H, dtCenter|dtVCenter|dtSingleLine|dtNoPrefix, colorRef(246, 241, 230))
 	if r.img != 0 && lay.Image.W > 0 {
 		drawTextBox(hdc, "截到的画面", lay.ImageLabel.X, lay.ImageLabel.Y, lay.ImageLabel.W, lay.ImageLabel.H, dtSingleLine|dtVCenter|dtNoPrefix, colorRef(232, 213, 163))
 		drawPremul(hdc, r.img, r.imgW, r.imgH, lay.Image.X, lay.Image.Y, lay.Image.W, lay.Image.H)

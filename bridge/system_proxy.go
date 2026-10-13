@@ -254,11 +254,16 @@ func setWindowsSystemProxy(server string, enabled bool, proxyType string, bypass
 		}
 	}
 
-	return runSystemProxyCommands(
+	err := runSystemProxyCommands(
 		[]string{"reg", "add", `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`, "/v", "ProxyEnable", "/t", "REG_DWORD", "/d", enabledValue, "/f"},
 		[]string{"reg", "add", `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`, "/v", "ProxyServer", "/d", proxyServer, "/f"},
 		[]string{"reg", "add", `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`, "/v", "ProxyOverride", "/d", normalizeBypass(bypass, ";"), "/f"},
 	)
+	if err != nil {
+		return err
+	}
+	refreshWindowsInternetSettings()
+	return nil
 }
 
 func setDarwinSystemProxy(server string, enabled bool, proxyType string, bypass string, services []string) error {

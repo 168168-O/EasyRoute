@@ -40,6 +40,9 @@ test('existing installs land on the glass bull shell and keep other choices', ()
       domesticDirect: false,
       kernel: { sortByDelay: false },
       pinnedRoutes: { wechat: 'direct', douyin: 'proxy' },
+      preferSystemProxyDefaulted: true,
+      tunEnabled: true,
+      autoSetSystemProxy: false,
     },
     true,
   )
@@ -52,6 +55,9 @@ test('existing installs land on the glass bull shell and keep other choices', ()
   assert.equal(again.domesticDirect, false)
   assert.equal(again.pinnedRoutes.wechat, 'direct')
   assert.equal(again.pinnedRoutes.douyin, 'proxy')
+  assert.equal(again.tunEnabled, true)
+  assert.equal(again.autoSetSystemProxy, false)
+  assert.equal(again.preferSystemProxyDefaulted, true)
 })
 
 test('existing exitOnClose true is migrated once and a later choice stays', () => {
@@ -73,6 +79,9 @@ test('existing exitOnClose true is migrated once and a later choice stays', () =
       simpleMode: false,
       domesticDirect: false,
       kernel: { sortByDelay: false },
+      preferSystemProxyDefaulted: true,
+      tunEnabled: true,
+      autoSetSystemProxy: false,
     },
     true,
   )
@@ -81,6 +90,34 @@ test('existing exitOnClose true is migrated once and a later choice stays', () =
   assert.equal(later.addGroupToMenu, false)
   assert.equal(later.simpleMode, false)
   assert.equal(later.domesticDirect, false)
+  assert.equal(later.tunEnabled, true)
+  assert.equal(later.autoSetSystemProxy, false)
+})
+
+test('first launch prefers the system proxy and a later TUN choice stays', () => {
+  const first = migrateAppSettings(
+    { tunEnabled: true, autoSetSystemProxy: false, kernel: {} },
+    true,
+  )
+  assert.equal(first.tunEnabled, false)
+  assert.equal(first.autoSetSystemProxy, true)
+  assert.equal(first.preferSystemProxyDefaulted, true)
+
+  const fresh = migrateAppSettings({ kernel: {} }, false)
+  assert.equal(fresh.tunEnabled, false)
+  assert.equal(fresh.autoSetSystemProxy, true)
+
+  const later = migrateAppSettings(
+    {
+      preferSystemProxyDefaulted: true,
+      tunEnabled: true,
+      autoSetSystemProxy: false,
+      kernel: {},
+    },
+    true,
+  )
+  assert.equal(later.tunEnabled, true)
+  assert.equal(later.autoSetSystemProxy, false)
 })
 
 test('subscription health warns under 7 days or under 10 percent', () => {
