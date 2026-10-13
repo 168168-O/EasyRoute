@@ -232,6 +232,7 @@ type shotResult struct {
 	original, chinese, provider string
 	errText                     string
 	x, y                        int32
+	png                         []byte
 }
 
 var (
@@ -392,6 +393,9 @@ func startShotWindow() error {
 	if msgHwnd == 0 {
 		return fmt.Errorf("创建消息窗口失败：%v", windows.GetLastError())
 	}
+	if err := createFloatWidget(); err != nil {
+		log.Printf("screenshot widget: %v", err)
+	}
 	return nil
 }
 
@@ -482,6 +486,7 @@ func registerShotHotkeys(shot, translate string) FlagResult {
 	if note != "" {
 		log.Printf("screenshot hotkeys: %s", note)
 	}
+	rememberWidgetHotkeys(a.Norm, b.Norm)
 	return FlagResult{true, note}
 }
 
@@ -500,11 +505,17 @@ func onHotkey(id uintptr) {
 
 func beginCapture(mode int) {
 	if liveOverlay != nil {
-		closeOverlay()
+		hwnd := liveOverlay.hwnd
+		releaseCapture.Call()
+		destroyWindow.Call(hwnd)
 	}
+	hideFloatWidget()
+	hideResultForCapture()
+	hideBusyForCapture()
 	ov, err := captureVirtual()
 	if err != nil {
 		log.Printf("screenshot: %v", err)
+		showFloatWidget()
 		showPopup(80, 80, "", "", err.Error(), "")
 		return
 	}
@@ -513,6 +524,7 @@ func beginCapture(mode int) {
 	if hwnd == 0 {
 		log.Printf("screenshot window: %v", windows.GetLastError())
 		freeOverlayGDI(ov)
+		showFloatWidget()
 		showPopup(80, 80, "", "", "截图窗口创建失败", "")
 		return
 	}
@@ -538,11 +550,13 @@ func createShotWindow(ex, style uintptr, x, y, w, h int32) uintptr {
 
 func closeOverlay() {
 	if liveOverlay == nil {
+		showFloatWidget()
 		return
 	}
 	hwnd := liveOverlay.hwnd
 	releaseCapture.Call()
 	destroyWindow.Call(hwnd)
+	showFloatWidget()
 }
 
 func shotWndProc(hwnd, msg, wParam, lParam uintptr) uintptr {
@@ -554,6 +568,10 @@ func shotWndProc(hwnd, msg, wParam, lParam uintptr) uintptr {
 	switch msg {
 	case wmEraseBkgnd:
 		return 1
+	case wmMouseActivate:
+		if liveWidget != nil && liveWidget.hwnd == hwnd {
+			return maNoActivate
+		}
 	case wmDestroy:
 		onDestroy(hwnd)
 		return 0
@@ -613,10 +631,28 @@ func onDestroy(hwnd uintptr) {
 	if busyHwnd == hwnd {
 		busyHwnd = 0
 	}
+	if liveResult != nil && liveResult.hwnd == hwnd {
+		releaseResult(liveResult)
+		liveResult = nil
+	}
+	if liveWidget != nil && liveWidget.hwnd == hwnd {
+		if liveWidget.bull != 0 {
+			deleteObject.Call(liveWidget.bull)
+			liveWidget.bull = 0
+		}
+		liveWidget = nil
+	}
 	delete(windowKind, hwnd)
 }
 
 func onEscape(hwnd uintptr) {
+	if liveWidget != nil && liveWidget.hwnd == hwnd {
+		return
+	}
+	if liveResult != nil && liveResult.hwnd == hwnd {
+		destroyWindow.Call(hwnd)
+		return
+	}
 	if liveOverlay != nil && liveOverlay.hwnd == hwnd {
 		closeOverlay()
 		return
@@ -635,6 +671,14 @@ func onEscape(hwnd uintptr) {
 }
 
 func onLeftDown(hwnd uintptr) {
+	if liveWidget != nil && liveWidget.hwnd == hwnd {
+		onWidgetLeftDown(hwnd)
+		return
+	}
+	if liveResult != nil && liveResult.hwnd == hwnd {
+		onResultLeftDown(hwnd)
+		return
+	}
 	if liveOverlay != nil && liveOverlay.hwnd == hwnd {
 		x, y := clientCursor(hwnd)
 		ov := liveOverlay
@@ -682,6 +726,14 @@ func onLeftDown(hwnd uintptr) {
 }
 
 func onMouseMove(hwnd uintptr) {
+	if liveWidget != nil && liveWidget.hwnd == hwnd {
+		onWidgetMouseMove(hwnd)
+		return
+	}
+	if liveResult != nil && liveResult.hwnd == hwnd {
+		onResultMouseMove(hwnd)
+		return
+	}
 	if liveOverlay != nil && liveOverlay.hwnd == hwnd && liveOverlay.dragging {
 		x, y := clientCursor(hwnd)
 		ov := liveOverlay
@@ -709,6 +761,14 @@ func onMouseMove(hwnd uintptr) {
 }
 
 func onLeftUp(hwnd uintptr) {
+	if liveWidget != nil && liveWidget.hwnd == hwnd {
+		onWidgetLeftUp(hwnd)
+		return
+	}
+	if liveResult != nil && liveResult.hwnd == hwnd {
+		onResultLeftUp(hwnd)
+		return
+	}
 	if liveOverlay != nil && liveOverlay.hwnd == hwnd && liveOverlay.dragging {
 		x, y := clientCursor(hwnd)
 		liveOverlay.x1, liveOverlay.y1 = x, y
@@ -1054,16 +1114,16 @@ func startRecognize(png []byte, x, y int32, id int) {
 	go func() {
 		original, err := recognizeShotPNG(png)
 		if err != nil {
-			postResult(shotResult{id: id, errText: err.Error(), x: x, y: y})
+			postResult(shotResult{id: id, errText: err.Error(), x: x, y: y, png: png})
 			return
 		}
 		key, proxy := getSecrets()
 		zh, provider, err := translateScreenshotText(original, key, proxy)
 		if err != nil {
-			postResult(shotResult{id: id, original: original, errText: err.Error(), x: x, y: y})
+			postResult(shotResult{id: id, original: original, errText: err.Error(), x: x, y: y, png: png})
 			return
 		}
-		postResult(shotResult{id: id, original: original, chinese: zh, provider: provider, x: x, y: y})
+		postResult(shotResult{id: id, original: original, chinese: zh, provider: provider, x: x, y: y, png: png})
 	}()
 }
 
@@ -1088,7 +1148,7 @@ func drainResults() {
 		if busyHwnd != 0 {
 			destroyWindow.Call(busyHwnd)
 		}
-		showPopup(item.x, item.y, item.original, item.chinese, item.errText, item.provider)
+		showShotResult(item)
 	}
 }
 
@@ -1148,19 +1208,6 @@ func (p *textPopup) body() string {
 	return popupBody(p.original, p.chinese)
 }
 
-func providerNote(provider string) string {
-	switch provider {
-	case "deepseek":
-		return "来源：DeepSeek"
-	case "google":
-		return "来源：谷歌"
-	case "mymemory":
-		return "来源：MyMemory"
-	default:
-		return ""
-	}
-}
-
 func clampToScreen(x, y, w, h int32) (int32, int32) {
 	vx := int32(call(getSystemMetrics, smXVirtualScreen))
 	vy := int32(call(getSystemMetrics, smYVirtualScreen))
@@ -1200,6 +1247,10 @@ func paintWindow(hwnd uintptr) {
 		paintPopup(hdc, livePopup)
 	case kindBusy:
 		paintBusy(hdc, hwnd)
+	case kindWidget:
+		paintFloatWidget(hdc)
+	case kindResult:
+		paintTranslateResult(hdc)
 	}
 }
 
