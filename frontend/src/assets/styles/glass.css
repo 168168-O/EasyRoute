@@ -1356,3 +1356,20 @@ body[feature-no-animation='true'] :is(
 #app .gui-message[data-kind='warn'] {
   border-color: rgba(220, 190, 120, 0.4) !important;
 }
+
+/* The strategy list slides over the chart and 工作模式. It must be opaque,
+   or those words show through the glass rows. */
+.home-view > .controller-panel {
+  z-index: 4;
+  background: var(--base-gradient);
+  pointer-events: none;
+}
+
+.home-view > .controller-panel.translate-y-0 {
+  pointer-events: auto;
+}
+
+#app .controller-panel .proxy-toolbar,
+#app .controller-panel .lux-row.sticky {
+  background: #152033 !important;
+}

@@ -312,25 +312,27 @@ onActivated(() => {
   </div>
   <div v-for="group in groups" :key="group.name" class="m-8">
     <div
-      class="lux-row sticky z-2 flex gap-8 items-center p-8"
+      class="lux-row group-row sticky z-2 flex gap-8 items-center p-8"
       style="top: 52px"
       @click="toggleExpanded(group.name)"
     >
-      <div class="text-14 flex items-center gap-2 text-nowrap overflow-hidden">
-        <img v-if="group.icon" :src="group.icon" class="w-24 h-24 mr-4" draggable="false" />
-        <span class="font-bold text-18">{{ displayName(group.name) }}</span>
-        <span class="mx-8">
-          {{ displayType(group.type) }}
-        </span>
-        <span> :: </span>
-        <template v-for="(chain, index) in group.chains" :key="chain">
-          <span v-if="index !== 0" style="color: gray"> / </span>
-          <Button type="text" size="small" @click.stop="locateGroup(group, chain)">
-            {{ displayName(chain) }}
-          </Button>
-        </template>
+      <div class="group-row__main">
+        <div class="group-row__title">
+          <img v-if="group.icon" :src="group.icon" class="w-24 h-24" draggable="false" />
+          <span class="group-row__name font-bold text-18">{{ displayName(group.name) }}</span>
+          <span class="group-row__type">{{ displayType(group.type) }}</span>
+        </div>
+        <div class="group-row__chain">
+          <span class="group-row__now">{{ t('home.groups.current') }}</span>
+          <template v-for="(chain, index) in group.chains" :key="chain">
+            <span v-if="index !== 0" class="group-row__sep">/</span>
+            <Button type="text" size="small" @click.stop="locateGroup(group, chain)">
+              {{ displayName(chain) }}
+            </Button>
+          </template>
+        </div>
       </div>
-      <div class="ml-auto flex items-center" @click.stop>
+      <div class="group-row__tools ml-auto flex items-center" @click.stop>
         <Input
           v-model="filterKeywordsMap[group.name]"
           :placeholder="t('common.keywords')"
@@ -507,5 +509,41 @@ onActivated(() => {
   &-expanded {
     transform: rotate(0deg);
   }
+}
+
+.group-row__main {
+  min-width: 0;
+  flex: 1;
+}
+
+.group-row__title,
+.group-row__chain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.group-row__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-row__type,
+.group-row__now,
+.group-row__sep {
+  flex: none;
+  color: #c5d0dc;
+  font-size: 13px;
+}
+
+.group-row__chain {
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.group-row__tools {
+  flex: none;
 }
 </style>
