@@ -87,6 +87,10 @@ func (a *App) IsStartup() bool {
 
 func (a *App) ExitApp() {
 	log.Printf("ExitApp")
+	// A core left running on purpose still owns its TUN. Otherwise restore the NIC.
+	if !SingBoxCoreRunning() {
+		a.CleanupNetworkAfterStop()
+	}
 	Env.PreventExit = false
 	runtime.Quit(a.Ctx)
 }

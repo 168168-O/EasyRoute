@@ -14,6 +14,14 @@
   --font-scale: 1;
   --card: #0c1622;
   --card-2: #101c2a;
+  /* Exact frosted surface. Hover is the same recipe, only brighter. */
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-bg-hover: rgba(255, 255, 255, 0.16);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.12);
+  --glass-radius: 12px;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  --glass-blur: blur(12px);
+  --base-gradient: linear-gradient(165deg, #1a2436 0%, #101722 46%, #070b12 100%);
 }
 
 [data-theme='night-amethyst'] { --wave-rgb: 150, 110, 255; --wave-2-rgb: 230, 190, 255; }
@@ -39,7 +47,7 @@ body,
 }
 
 body {
-  background: #020814;
+  background: var(--base-gradient);
   color: var(--text-1);
   text-shadow: none;
   -webkit-font-smoothing: auto;
@@ -81,7 +89,7 @@ body {
 .bg-dim {
   position: absolute;
   inset: 0;
-  background: rgba(1, 5, 10, 0.84);
+  background: rgba(1, 5, 10, 0.42);
 }
 
 .bg-layer::after {
@@ -134,31 +142,25 @@ body {
   pointer-events: auto;
 }
 
-/* Outer glass window: 1px gold-to-ice hairline, long shadow, one grain veil. */
+/* Outer glass window. */
 #app .app-main {
   margin: 0 14px 14px;
-  border-radius: 28px;
-  border: 1px solid rgba(var(--accent-2-rgb), 0.55);
-  background: #071018;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  border-radius: var(--glass-radius);
+  border: var(--glass-border);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   overflow: hidden;
   position: relative;
 }
 
 #app .app-main::before {
-  content: '';
-  position: absolute;
-  z-index: 3;
-  left: 36px;
-  right: 36px;
-  top: 0;
-  height: 1px;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.92) 35%, rgba(var(--accent-2-rgb), 0.8) 62%, transparent);
+  content: none;
 }
 
 #app .app-titlebar {
-  background: #071018;
+  background: transparent;
   color: #fff;
 }
 
@@ -173,18 +175,12 @@ body {
   width: 24px;
   height: 24px;
   border-radius: 8px;
-  display: grid;
-  place-items: center;
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--on-accent, #1a1408);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--accent) 40%, #fff),
-    var(--accent) 55%,
-    color-mix(in srgb, var(--accent) 70%, #000)
-  );
-  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.55);
+  object-fit: cover;
+  flex: none;
+  background: transparent;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 6px 14px rgba(8, 14, 22, 0.22);
 }
 
 .empty-mark {
@@ -211,7 +207,7 @@ body {
 }
 
 #app .main-nav__button:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--glass-bg-hover) !important;
 }
 
 #app .main-nav__button.is-active {
@@ -225,15 +221,9 @@ body {
   display: inline-flex;
   width: 16px;
   height: 16px;
-}
-
-#app .nav-ico svg {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  shape-rendering: geometricPrecision;
+  object-fit: contain;
+  border-radius: 4px;
+  flex: none;
 }
 
 /* Inner glass content */
@@ -251,33 +241,27 @@ body {
   padding-right: 16px;
   padding-bottom: 32px;
   scroll-padding-bottom: 32px;
-  border-radius: 22px;
-  border: 1px solid rgba(var(--accent-2-rgb), 0.4);
-  background: #071018;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  border-radius: var(--glass-radius);
+  border: var(--glass-border);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 #app .app-page::before {
-  content: '';
-  position: absolute;
-  z-index: 2;
-  left: 28px;
-  right: 28px;
-  top: 0;
-  height: 1px;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), rgba(var(--accent-2-rgb), 0.55), transparent);
+  content: none;
 }
 
 #app .gui-card,
 .lux-row {
   color: #fff;
-  border: 1px solid rgba(var(--accent-2-rgb), 0.38) !important;
-  border-radius: 16px !important;
-  background: var(--card) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  border: var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  background: var(--glass-bg) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .lux-row {
@@ -295,18 +279,21 @@ body[theme-mode='light'] .lux-row {
 #app .proxy-toolbar,
 #app .overview-toolbar,
 #app .controller-panel .sticky {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(8, 20, 48, 0.22)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  background: var(--glass-bg) !important;
+  border: var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 #app .controller-panel .lux-row.sticky {
   margin-bottom: 8px;
-  border: 1px solid rgba(var(--accent-2-rgb), 0.45) !important;
-  border-radius: 16px !important;
-  background: var(--card) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  border: var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  background: var(--glass-bg) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 #app .gui-tabs-tab .gui-button {
@@ -407,6 +394,7 @@ body[theme-mode='light'] .lux-row {
   width: 20px;
   height: 20px;
   border-radius: 999px;
+  object-fit: cover;
   background: transparent !important;
   box-shadow: none;
   image-rendering: auto;
@@ -743,12 +731,16 @@ body[theme-mode='light'] {
   color: #142033;
 }
 
-body[theme-mode='light'] #app .app-main {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.4));
+body[theme-mode='light'] #app .app-main,
+body[theme-mode='light'] #app .app-page {
+  background: var(--glass-bg);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 body[theme-mode='light'] #app .app-page {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.78), rgba(232, 242, 255, 0.62));
   color: #142033;
 }
 
@@ -1287,4 +1279,97 @@ body[feature-no-animation='true'] :is(
   .step > i
 ) {
   animation: none !important;
+}
+
+/* Always-on frosted controls. Thin light edge, one highlight, low-saturation shadow. */
+:is(
+  #app .gui-button,
+  #app .main-nav__button,
+  .ghost-btn,
+  .btn.add,
+  .pill-btn,
+  .glass-chip,
+  .tr-swap,
+  .glass-ring
+) {
+  color: #fff;
+  border: var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  background: var(--glass-bg) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  animation: none !important;
+  text-shadow: none;
+}
+
+:is(
+  #app .gui-button.primary,
+  #app .main-nav__button.is-active,
+  .btn.add,
+  .glass-chip.on,
+  .glass-ring,
+  #app .gui-radio-button.active
+) {
+  background: var(--glass-bg-hover) !important;
+  border: var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
+}
+
+:is(
+  #app .gui-button,
+  #app .main-nav__button,
+  .ghost-btn,
+  .btn.add,
+  .pill-btn,
+  .glass-chip,
+  .tr-swap
+):hover {
+  background: var(--glass-bg-hover) !important;
+  border: var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
+}
+
+#app .gui-message,
+.tr-box,
+.tr-select,
+.tr-history,
+.sub-status,
+.network-check .nc-input,
+.note,
+.picker,
+#app .controller-panel .lux-row.sticky {
+  background: var(--glass-bg) !important;
+  border: var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+#app .gui-message[data-kind='error'] {
+  border-color: rgba(226, 120, 120, 0.45) !important;
+}
+#app .gui-message[data-kind='success'] {
+  border-color: rgba(120, 200, 150, 0.4) !important;
+}
+#app .gui-message[data-kind='warn'] {
+  border-color: rgba(220, 190, 120, 0.4) !important;
+}
+
+/* The strategy list slides over the chart and 工作模式. It must be opaque,
+   or those words show through the glass rows. */
+.home-view > .controller-panel {
+  z-index: 4;
+  background: var(--base-gradient);
+  pointer-events: none;
+}
+
+.home-view > .controller-panel.translate-y-0 {
+  pointer-events: auto;
+}
+
+#app .controller-panel .proxy-toolbar,
+#app .controller-panel .lux-row.sticky {
+  background: #152033 !important;
 }

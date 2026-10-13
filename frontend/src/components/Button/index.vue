@@ -12,7 +12,7 @@ interface Props {
   role?: string
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   type: 'normal',
   size: 'default',
   iconSize: undefined,
@@ -22,6 +22,7 @@ withDefaults(defineProps<Props>(), {
   disabled: false,
   role: 'button',
 })
+
 </script>
 
 <template>

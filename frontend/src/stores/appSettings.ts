@@ -78,7 +78,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     height: 0,
     exitOnClose: true,
     closeKernelOnExit: true,
-    autoSetSystemProxy: false,
+    autoSetSystemProxy: true,
     autoSetSystemDNS: false,
     requestProxyMode: RequestProxyMode.System,
     customProxy: '',
@@ -89,7 +89,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     autoStartKernel: false,
     preferRunAsAdmin: true,
     autoRestartKernel: false,
-    tunEnabled: true,
+    tunEnabled: false,
     screenshotHotkey: 'Ctrl+Alt+A',
     screenshotTranslateHotkey: 'Ctrl+Alt+T',
     deepseekApiKey: '',
@@ -181,10 +181,11 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     } else if (settings.preferRunAsAdmin === undefined) {
       settings.preferRunAsAdmin = false
     }
-    // TUN already captures traffic, so new installs leave the system proxy off.
-    // A saved true or false in an existing user.yaml is kept.
+    // System proxy is the default. TUN stays off unless the user turns it on.
+    // migrateAppSettings applies that once; a later saved choice is kept.
     if (!data) {
-      settings.autoSetSystemProxy = false
+      settings.autoSetSystemProxy = true
+      settings.tunEnabled = false
     } else if (settings.autoSetSystemProxy === undefined) {
       settings.autoSetSystemProxy = true
     }
@@ -224,7 +225,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     if (!Array.isArray(settings.appPrograms)) settings.appPrograms = []
     if (!Array.isArray(settings.translateHistory)) settings.translateHistory = []
     settings.translateHistory = settings.translateHistory.slice(0, 20)
-    if (settings.tunEnabled === undefined) settings.tunEnabled = true
+    if (settings.tunEnabled === undefined) settings.tunEnabled = false
     if (settings.screenshotHotkey === undefined) settings.screenshotHotkey = 'Ctrl+Alt+A'
     if (settings.screenshotTranslateHotkey === undefined) settings.screenshotTranslateHotkey = 'Ctrl+Alt+T'
     if (settings.deepseekApiKey === undefined) settings.deepseekApiKey = ''
@@ -307,6 +308,19 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
 
   /* Apply AppSettings */
   const onAppSettingsChange = (settings: App.AppSettings) => {
+    // Glass + bull is the product, not a theme a click can turn off.
+    if (
+      settings.theme !== Theme.Dark ||
+      settings.themePalette !== 'gold-sea' ||
+      settings.color !== Color.Default ||
+      settings.dynamicBackground !== true
+    ) {
+      settings.theme = Theme.Dark
+      settings.themePalette = 'gold-sea'
+      settings.color = Color.Default
+      settings.dynamicBackground = true
+      return
+    }
     applyAppSettings.theme(settings.theme)
     applyAppSettings.themePalette(settings.themePalette)
     applyAppSettings.fontScale(settings.fontScale)

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-
+import bull from '@/assets/bull-crystal.webp'
 import i18n from '@/lang'
 
 export type MessageIcon = 'info' | 'warn' | 'error' | 'success'
@@ -17,21 +16,16 @@ const props = withDefaults(defineProps<Props>(), {
 defineEmits(['close'])
 
 const { t } = i18n.global
-
-const iconMap = {
-  info: 'messageInfo',
-  success: 'messageSuccess',
-  error: 'messageError',
-  warn: 'messageWarn',
-}
-
-const icon = computed(() => iconMap[props.icon] as any)
 </script>
 
 <template>
   <Transition name="slide-down" appear>
-    <div class="gui-message flex items-center p-8 pl-16 rounded-8 my-4 shadow" role="status">
-      <Icon class="shrink-0" :icon="icon" />
+    <div
+      class="gui-message flex items-center p-8 pl-16 rounded-8 my-4 shadow"
+      role="status"
+      :data-kind="props.icon"
+    >
+      <img :src="bull" alt="" draggable="false" class="msg-bull shrink-0" />
       <div class="text-14 pl-12 break-all">{{ t(content) }}</div>
       <Button
         icon="close"
@@ -53,5 +47,12 @@ const icon = computed(() => iconMap[props.icon] as any)
       visibility: visible;
     }
   }
+}
+
+.msg-bull {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 4px;
 }
 </style>
