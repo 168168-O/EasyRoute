@@ -1,3 +1,16 @@
+/**
+ * Product shell. Glass + the bull head are always on.
+ * A saved light/custom theme cannot drop an existing install back to the stock look.
+ * Other choices (exit, sort, menus, simple mode) stay once the user has set them.
+ */
+export const applyGlassBullBaseline = (settings: Record<string, any>) => {
+  settings.theme = 'dark'
+  settings.themePalette = 'gold-sea'
+  settings.color = 'default'
+  settings.dynamicBackground = true
+  return settings
+}
+
 /** One-time product defaults. A later switch by the user is kept. */
 export const migrateAppSettings = (settings: Record<string, any>, existed: boolean) => {
   if (!existed || settings.exitOnCloseMigrated !== true) {
@@ -15,5 +28,6 @@ export const migrateAppSettings = (settings: Record<string, any>, existed: boole
   }
   if (settings.simpleMode === undefined) settings.simpleMode = true
   if (settings.domesticDirect === undefined) settings.domesticDirect = true
+  applyGlassBullBaseline(settings)
   return settings
 }

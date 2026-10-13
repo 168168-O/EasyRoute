@@ -307,6 +307,19 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
 
   /* Apply AppSettings */
   const onAppSettingsChange = (settings: App.AppSettings) => {
+    // Glass + bull is the product, not a theme a click can turn off.
+    if (
+      settings.theme !== Theme.Dark ||
+      settings.themePalette !== 'gold-sea' ||
+      settings.color !== Color.Default ||
+      settings.dynamicBackground !== true
+    ) {
+      settings.theme = Theme.Dark
+      settings.themePalette = 'gold-sea'
+      settings.color = Color.Default
+      settings.dynamicBackground = true
+      return
+    }
     applyAppSettings.theme(settings.theme)
     applyAppSettings.themePalette(settings.themePalette)
     applyAppSettings.fontScale(settings.fontScale)

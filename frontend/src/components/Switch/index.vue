@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick } from 'vue'
 
+import bull from '@/assets/bull-crystal.webp'
 import i18n from '@/lang'
 
 interface Props {
@@ -48,10 +49,13 @@ const toggle = () => {
     role="switch"
     @click="toggle"
   >
-    <div
+    <img
+      :src="bull"
+      alt=""
+      draggable="false"
       :class="[border === 'square' ? 'rounded-4' : 'rounded-full']"
       class="dot absolute h-18 w-18 duration-200"
-    ></div>
+    />
 
     <div v-if="$slots.default || label" class="slot line-clamp-1 break-all">
       <span v-if="label">{{ t(label) }}</span>
@@ -74,6 +78,11 @@ const toggle = () => {
     width: 12px;
     height: 12px;
   }
+}
+
+.dot {
+  object-fit: cover;
+  background: transparent;
 }
 
 .square {

@@ -10,6 +10,7 @@ import {
   WindowIsMaximised,
   RestartApp,
 } from '@/bridge'
+import bull from '@/assets/bull-crystal.webp'
 import { OS } from '@/enums/app'
 import { useAppSettingsStore, useKernelApiStore, useEnvStore, useAppStore } from '@/stores'
 import { APP_TITLE, APP_VERSION, debounce, exitApp, reloadApp } from '@/utils'
@@ -74,7 +75,7 @@ onUnmounted(() => window.removeEventListener('resize', onResize))
     class="app-titlebar flex items-center py-8 gap-8 px-12"
     style="--wails-draggable: drag"
   >
-    <div v-if="!isDarwin" class="brand-mark" aria-hidden="true">达</div>
+    <img v-if="!isDarwin" :src="bull" alt="" draggable="false" class="brand-mark" />
 
     <div
       :class="isDarwin ? 'justify-center py-4 text-12' : 'text-14'"

@@ -3,12 +3,56 @@ import test from 'node:test'
 
 import { explainDomainRoute, sampleBaseConfig, applyAppRouting } from '../src/utils/appRouting.ts'
 import { attachCountryGroups, buildCountryUrltests, classifyNode } from '../src/utils/countryGroups.ts'
-import { migrateAppSettings } from '../src/utils/settingsMigration.ts'
+import { applyGlassBullBaseline, migrateAppSettings } from '../src/utils/settingsMigration.ts'
 import { SUBSCRIPTION_UPDATE_TASK_ID, subscriptionUpdateTask } from '../src/utils/subscriptionSchedule.ts'
 import { subscriptionHealth } from '../src/utils/subscriptionStatus.ts'
 
 const DAY = 24 * 60 * 60 * 1000
 const now = Date.UTC(2026, 9, 8)
+
+test('existing installs land on the glass bull shell and keep other choices', () => {
+  const saved = applyGlassBullBaseline({
+    theme: 'light',
+    themePalette: 'rose-champagne',
+    color: 'custom',
+    dynamicBackground: false,
+    pinnedRoutes: { wechat: 'proxy', douyin: 'direct' },
+  })
+  assert.equal(saved.theme, 'dark')
+  assert.equal(saved.themePalette, 'gold-sea')
+  assert.equal(saved.color, 'default')
+  assert.equal(saved.dynamicBackground, true)
+  assert.equal(saved.pinnedRoutes.wechat, 'proxy')
+  assert.equal(saved.pinnedRoutes.douyin, 'direct')
+
+  const again = migrateAppSettings(
+    {
+      theme: 'light',
+      themePalette: 'galaxy-blues',
+      color: 'blue',
+      dynamicBackground: false,
+      exitOnClose: true,
+      exitOnCloseMigrated: true,
+      sortByDelayDefaulted: true,
+      addGroupToMenuDefaulted: true,
+      addGroupToMenu: false,
+      simpleMode: false,
+      domesticDirect: false,
+      kernel: { sortByDelay: false },
+      pinnedRoutes: { wechat: 'direct', douyin: 'proxy' },
+    },
+    true,
+  )
+  assert.equal(again.theme, 'dark')
+  assert.equal(again.themePalette, 'gold-sea')
+  assert.equal(again.color, 'default')
+  assert.equal(again.dynamicBackground, true)
+  assert.equal(again.exitOnClose, true)
+  assert.equal(again.simpleMode, false)
+  assert.equal(again.domesticDirect, false)
+  assert.equal(again.pinnedRoutes.wechat, 'direct')
+  assert.equal(again.pinnedRoutes.douyin, 'proxy')
+})
 
 test('existing exitOnClose true is migrated once and a later choice stays', () => {
   const first = migrateAppSettings({ exitOnClose: true, kernel: { sortByDelay: false }, addGroupToMenu: false }, true)

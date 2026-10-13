@@ -81,7 +81,7 @@ body {
 .bg-dim {
   position: absolute;
   inset: 0;
-  background: rgba(1, 5, 10, 0.84);
+  background: rgba(1, 5, 10, 0.42);
 }
 
 .bg-layer::after {
@@ -138,9 +138,13 @@ body {
 #app .app-main {
   margin: 0 14px 14px;
   border-radius: 28px;
-  border: 1px solid rgba(var(--accent-2-rgb), 0.55);
-  background: #071018;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(7, 16, 24, 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 18px 36px rgba(8, 14, 22, 0.24);
+  backdrop-filter: blur(16px) saturate(1.08);
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
   overflow: hidden;
   position: relative;
 }
@@ -158,7 +162,7 @@ body {
 }
 
 #app .app-titlebar {
-  background: #071018;
+  background: transparent;
   color: #fff;
 }
 
@@ -173,18 +177,12 @@ body {
   width: 24px;
   height: 24px;
   border-radius: 8px;
-  display: grid;
-  place-items: center;
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--on-accent, #1a1408);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--accent) 40%, #fff),
-    var(--accent) 55%,
-    color-mix(in srgb, var(--accent) 70%, #000)
-  );
-  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.55);
+  object-fit: cover;
+  flex: none;
+  background: transparent;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 6px 14px rgba(8, 14, 22, 0.22);
 }
 
 .empty-mark {
@@ -225,15 +223,9 @@ body {
   display: inline-flex;
   width: 16px;
   height: 16px;
-}
-
-#app .nav-ico svg {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  shape-rendering: geometricPrecision;
+  object-fit: contain;
+  border-radius: 4px;
+  flex: none;
 }
 
 /* Inner glass content */
@@ -252,11 +244,13 @@ body {
   padding-bottom: 32px;
   scroll-padding-bottom: 32px;
   border-radius: 22px;
-  border: 1px solid rgba(var(--accent-2-rgb), 0.4);
-  background: #071018;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(7, 16, 24, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 24px rgba(8, 14, 22, 0.18);
+  backdrop-filter: blur(12px) saturate(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
 }
 
 #app .app-page::before {
@@ -274,10 +268,14 @@ body {
 #app .gui-card,
 .lux-row {
   color: #fff;
-  border: 1px solid rgba(var(--accent-2-rgb), 0.38) !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
   border-radius: 16px !important;
-  background: var(--card) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  background: rgba(12, 22, 34, 0.4) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 22px rgba(8, 14, 22, 0.18) !important;
+  backdrop-filter: blur(12px) saturate(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
 }
 
 .lux-row {
@@ -407,6 +405,7 @@ body[theme-mode='light'] .lux-row {
   width: 20px;
   height: 20px;
   border-radius: 999px;
+  object-fit: cover;
   background: transparent !important;
   box-shadow: none;
   image-rendering: auto;
@@ -1287,4 +1286,85 @@ body[feature-no-animation='true'] :is(
   .step > i
 ) {
   animation: none !important;
+}
+
+/* Always-on frosted controls. Thin light edge, one highlight, low-saturation shadow. */
+:is(
+  #app .gui-button,
+  #app .main-nav__button,
+  .ghost-btn,
+  .btn.add,
+  .pill-btn,
+  .glass-chip,
+  .tr-swap,
+  .glass-ring
+) {
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.34) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 8px 16px rgba(8, 14, 22, 0.16) !important;
+  backdrop-filter: blur(10px) saturate(1.05);
+  -webkit-backdrop-filter: blur(10px) saturate(1.05);
+  animation: none !important;
+  text-shadow: none;
+}
+
+:is(
+  #app .gui-button.primary,
+  #app .main-nav__button.is-active,
+  .btn.add,
+  .glass-chip.on,
+  .glass-ring,
+  #app .gui-radio-button.active
+) {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    0 8px 18px rgba(8, 14, 22, 0.18) !important;
+}
+
+:is(
+  #app .gui-button,
+  #app .main-nav__button,
+  .ghost-btn,
+  .btn.add,
+  .pill-btn,
+  .glass-chip,
+  .tr-swap
+):hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 8px 16px rgba(8, 14, 22, 0.16) !important;
+}
+
+#app .gui-message,
+.tr-box,
+.tr-select,
+.tr-history,
+.sub-status,
+.network-check .nc-input,
+.note,
+.picker,
+#app .controller-panel .lux-row.sticky {
+  background: rgba(12, 22, 34, 0.42) !important;
+  border: 1px solid rgba(255, 255, 255, 0.26) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 10px 22px rgba(8, 14, 22, 0.18) !important;
+  backdrop-filter: blur(14px) saturate(1.05);
+  -webkit-backdrop-filter: blur(14px) saturate(1.05);
+}
+
+#app .gui-message[data-kind='error'] {
+  border-color: rgba(226, 120, 120, 0.45) !important;
+}
+#app .gui-message[data-kind='success'] {
+  border-color: rgba(120, 200, 150, 0.4) !important;
+}
+#app .gui-message[data-kind='warn'] {
+  border-color: rgba(220, 190, 120, 0.4) !important;
 }
