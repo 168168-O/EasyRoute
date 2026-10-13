@@ -14,6 +14,14 @@
   --font-scale: 1;
   --card: #0c1622;
   --card-2: #101c2a;
+  /* Exact frosted surface. Hover is the same recipe, only brighter. */
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-bg-hover: rgba(255, 255, 255, 0.16);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.12);
+  --glass-radius: 12px;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  --glass-blur: blur(12px);
+  --base-gradient: linear-gradient(165deg, #1a2436 0%, #101722 46%, #070b12 100%);
 }
 
 [data-theme='night-amethyst'] { --wave-rgb: 150, 110, 255; --wave-2-rgb: 230, 190, 255; }
@@ -39,7 +47,7 @@ body,
 }
 
 body {
-  background: #020814;
+  background: var(--base-gradient);
   color: var(--text-1);
   text-shadow: none;
   -webkit-font-smoothing: auto;
@@ -134,31 +142,21 @@ body {
   pointer-events: auto;
 }
 
-/* Outer glass window: 1px gold-to-ice hairline, long shadow, one grain veil. */
+/* Outer glass window. */
 #app .app-main {
   margin: 0 14px 14px;
-  border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(7, 16, 24, 0.46);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 18px 36px rgba(8, 14, 22, 0.24);
-  backdrop-filter: blur(16px) saturate(1.08);
-  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+  border-radius: var(--glass-radius);
+  border: var(--glass-border);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   overflow: hidden;
   position: relative;
 }
 
 #app .app-main::before {
-  content: '';
-  position: absolute;
-  z-index: 3;
-  left: 36px;
-  right: 36px;
-  top: 0;
-  height: 1px;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.92) 35%, rgba(var(--accent-2-rgb), 0.8) 62%, transparent);
+  content: none;
 }
 
 #app .app-titlebar {
@@ -209,7 +207,7 @@ body {
 }
 
 #app .main-nav__button:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--glass-bg-hover) !important;
 }
 
 #app .main-nav__button.is-active {
@@ -243,39 +241,27 @@ body {
   padding-right: 16px;
   padding-bottom: 32px;
   scroll-padding-bottom: 32px;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(7, 16, 24, 0.28);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 10px 24px rgba(8, 14, 22, 0.18);
-  backdrop-filter: blur(12px) saturate(1.05);
-  -webkit-backdrop-filter: blur(12px) saturate(1.05);
+  border-radius: var(--glass-radius);
+  border: var(--glass-border);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 #app .app-page::before {
-  content: '';
-  position: absolute;
-  z-index: 2;
-  left: 28px;
-  right: 28px;
-  top: 0;
-  height: 1px;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), rgba(var(--accent-2-rgb), 0.55), transparent);
+  content: none;
 }
 
 #app .gui-card,
 .lux-row {
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.24) !important;
-  border-radius: 16px !important;
-  background: rgba(12, 22, 34, 0.4) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 10px 22px rgba(8, 14, 22, 0.18) !important;
-  backdrop-filter: blur(12px) saturate(1.05);
-  -webkit-backdrop-filter: blur(12px) saturate(1.05);
+  border: var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  background: var(--glass-bg) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .lux-row {
@@ -293,18 +279,21 @@ body[theme-mode='light'] .lux-row {
 #app .proxy-toolbar,
 #app .overview-toolbar,
 #app .controller-panel .sticky {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(8, 20, 48, 0.22)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  background: var(--glass-bg) !important;
+  border: var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 #app .controller-panel .lux-row.sticky {
   margin-bottom: 8px;
-  border: 1px solid rgba(var(--accent-2-rgb), 0.45) !important;
-  border-radius: 16px !important;
-  background: var(--card) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  border: var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  background: var(--glass-bg) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 #app .gui-tabs-tab .gui-button {
@@ -742,12 +731,16 @@ body[theme-mode='light'] {
   color: #142033;
 }
 
-body[theme-mode='light'] #app .app-main {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.4));
+body[theme-mode='light'] #app .app-main,
+body[theme-mode='light'] #app .app-page {
+  background: var(--glass-bg);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 body[theme-mode='light'] #app .app-page {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.78), rgba(232, 242, 255, 0.62));
   color: #142033;
 }
 
@@ -1300,13 +1293,12 @@ body[feature-no-animation='true'] :is(
   .glass-ring
 ) {
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.34) !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.42),
-    0 8px 16px rgba(8, 14, 22, 0.16) !important;
-  backdrop-filter: blur(10px) saturate(1.05);
-  -webkit-backdrop-filter: blur(10px) saturate(1.05);
+  border: var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  background: var(--glass-bg) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   animation: none !important;
   text-shadow: none;
 }
@@ -1319,11 +1311,9 @@ body[feature-no-animation='true'] :is(
   .glass-ring,
   #app .gui-radio-button.active
 ) {
-  background: rgba(255, 255, 255, 0.16) !important;
-  border-color: rgba(255, 255, 255, 0.55) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.62),
-    0 8px 18px rgba(8, 14, 22, 0.18) !important;
+  background: var(--glass-bg-hover) !important;
+  border: var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
 }
 
 :is(
@@ -1335,10 +1325,9 @@ body[feature-no-animation='true'] :is(
   .glass-chip,
   .tr-swap
 ):hover {
-  background: rgba(255, 255, 255, 0.2) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 8px 16px rgba(8, 14, 22, 0.16) !important;
+  background: var(--glass-bg-hover) !important;
+  border: var(--glass-border) !important;
+  box-shadow: var(--glass-shadow) !important;
 }
 
 #app .gui-message,
@@ -1350,13 +1339,12 @@ body[feature-no-animation='true'] :is(
 .note,
 .picker,
 #app .controller-panel .lux-row.sticky {
-  background: rgba(12, 22, 34, 0.42) !important;
-  border: 1px solid rgba(255, 255, 255, 0.26) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 10px 22px rgba(8, 14, 22, 0.18) !important;
-  backdrop-filter: blur(14px) saturate(1.05);
-  -webkit-backdrop-filter: blur(14px) saturate(1.05);
+  background: var(--glass-bg) !important;
+  border: var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 #app .gui-message[data-kind='error'] {

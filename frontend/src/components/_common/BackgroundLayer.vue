@@ -50,10 +50,9 @@ const drawWaves = () => {
   const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296
 
   const g = c.createLinearGradient(0, 0, W * 0.25, H)
-  g.addColorStop(0, '#010718')
-  g.addColorStop(0.4, '#041d52')
-  g.addColorStop(0.75, '#07307a')
-  g.addColorStop(1, '#0a44a0')
+  g.addColorStop(0, '#1a2436')
+  g.addColorStop(0.46, '#101722')
+  g.addColorStop(1, '#070b12')
   c.fillStyle = g
   c.fillRect(0, 0, W, H)
 
@@ -65,9 +64,9 @@ const drawWaves = () => {
     c.fillStyle = rg
     c.fillRect(0, 0, W, H)
   }
-  glow(W * 0.55, H * 1.05, W * 0.65, C2, 0.55)
-  glow(W * 0.98, H * 0.45, W * 0.42, C1, 0.45)
-  glow(W * 0.02, H * 0.55, W * 0.38, C1, 0.35)
+  glow(W * 0.55, H * 1.05, W * 0.65, C2, 0.16)
+  glow(W * 0.98, H * 0.45, W * 0.42, C1, 0.12)
+  glow(W * 0.02, H * 0.55, W * 0.38, C1, 0.1)
   c.globalCompositeOperation = 'lighter'
 
   const yAt = (
