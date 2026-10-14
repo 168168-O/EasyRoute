@@ -154,7 +154,7 @@ public class UiButtonTests
         var methods = Methods(code);
         var settingMethods = Methods(settings);
 
-        Assert.Contains("Text=\"减\"", main);
+        Assert.Contains("Text=\"-\"", main);
         Assert.Contains("Click=\"Remove_Click\"", main);
         Assert.Contains("Id = \"add\"", session);
         Assert.Contains("Title = \"添加\"", session);
