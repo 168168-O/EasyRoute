@@ -89,12 +89,6 @@
         <Border Grid.Column="0" Background="#F0080C14" BorderBrush="#22E9D3A0" BorderThickness="0,0,1,0">
           <DockPanel>
             <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,8">
-              <Button x:Name="RemoveAccountButton" Style="{StaticResource BareBtn}" Click="Remove_Click" Margin="0,4" ToolTip="移除当前账号" AutomationProperties.Name="移除账号">
-                <StackPanel>
-                  <TextBlock Text="减" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource Gold}"/>
-                  <TextBlock Text="移除" FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource Ink3}"/>
-                </StackPanel>
-              </Button>
               <Button x:Name="ScriptsButton" Style="{StaticResource BareBtn}" Click="Settings_Click" Margin="0,4" ToolTip="话术库">
                 <StackPanel>
                   <TextBlock Text="库" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource Gold}"/>
@@ -109,6 +103,7 @@
               </Button>
             </StackPanel>
             <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel>
               <ItemsControl ItemsSource="{Binding Accounts}" Margin="0,8,0,0">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
@@ -170,6 +165,15 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+              <Button x:Name="RemoveAccountButton" Style="{StaticResource BareBtn}" Click="Remove_Click" Margin="0,0,0,8" ToolTip="移除当前账号" AutomationProperties.Name="移除账号">
+                <Grid Width="56" Height="58">
+                  <Border Width="44" Height="44" CornerRadius="14" VerticalAlignment="Top" HorizontalAlignment="Center" Background="#FF1A2230" BorderBrush="#22FFFFFF" BorderThickness="1">
+                    <TextBlock Text="减" Foreground="White" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+                  <TextBlock Text="移除" FontSize="10" Foreground="{StaticResource Ink3}" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
+                </Grid>
+              </Button>
+              </StackPanel>
             </ScrollViewer>
           </DockPanel>
         </Border>

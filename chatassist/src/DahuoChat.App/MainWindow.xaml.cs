@@ -561,7 +561,30 @@ public partial class MainWindow : Window
                 encoder.Save(stream);
             if (new FileInfo(path).Length < 8000)
                 throw new InvalidOperationException("画面太小：" + file);
+            if (name == "wechat")
+                SaveSidebarCrop(bmp);
         }
+    }
+
+    private void SaveSidebarCrop(RenderTargetBitmap bmp)
+    {
+        var rail = Math.Max(1, (int)Math.Round(RailCol.ActualWidth));
+        rail = Math.Min(rail, bmp.PixelWidth);
+        var height = bmp.PixelHeight;
+        var stride = rail * 4;
+        var pixels = new byte[stride * height];
+        bmp.CopyPixels(new Int32Rect(0, 0, rail, height), pixels, stride, 0);
+        var source = BitmapSource.Create(rail, height, 96, 96, PixelFormats.Pbgra32, null, pixels, stride);
+        var scale = new ScaleTransform(4, 4);
+        scale.Freeze();
+        var scaled = new TransformedBitmap(source, scale);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(scaled));
+        var path = Path.Combine(_shotDir!, "06-sidebar.png");
+        using (var stream = File.Create(path))
+            encoder.Save(stream);
+        if (new FileInfo(path).Length < 2000)
+            throw new InvalidOperationException("侧栏画面太小");
     }
 
     private static string FriendlyWeb(string message)

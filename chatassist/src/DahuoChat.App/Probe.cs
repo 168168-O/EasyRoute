@@ -52,8 +52,17 @@ public partial class MainWindow
 
         Step("侧栏有减，添加还在", () =>
         {
-            _ = Named("RemoveAccountButton");
-            _ = AccountButton("add");
+            var add = AccountButton("add");
+            var remove = Named("RemoveAccountButton");
+            var addBottom = add.TranslatePoint(new Point(0, add.ActualHeight), this).Y;
+            var removeTop = remove.TranslatePoint(new Point(0, 0), this).Y;
+            var gap = removeTop - addBottom;
+            if (gap < -2 || gap > 28)
+                throw new InvalidOperationException("添加和移除没有上下挨着，间距 " + gap.ToString("0"));
+            var addX = add.TranslatePoint(new Point(add.ActualWidth / 2, 0), this).X;
+            var removeX = remove.TranslatePoint(new Point(remove.ActualWidth / 2, 0), this).X;
+            if (Math.Abs(addX - removeX) > 12)
+                throw new InvalidOperationException("移除不在添加正下方");
             if (RemoveConfirm.Visibility == Visibility.Visible) throw new InvalidOperationException("确认框不该先出现");
             if (Session.AccountsFile.Accounts.Count != 4) throw new InvalidOperationException("演示账号不是 4 个");
         });
