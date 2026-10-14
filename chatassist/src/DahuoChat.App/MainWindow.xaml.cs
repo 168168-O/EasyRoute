@@ -11,6 +11,8 @@ namespace DahuoChat;
 public partial class MainWindow : Window
 {
     private readonly string? _shotDir;
+    private readonly string? _probeDir;
+    private string? _pendingRemoveId;
     private readonly List<int> _hotIds = [];
     private DouyinHost? _douyin;
     private bool _dyWired;
@@ -31,10 +33,11 @@ public partial class MainWindow : Window
 
     public Session Session { get; }
 
-    public MainWindow(Session session, string? shotDir)
+    public MainWindow(Session session, string? shotDir, string? probeDir = null)
     {
         Session = session;
         _shotDir = shotDir;
+        _probeDir = probeDir;
         InitializeComponent();
         DataContext = session;
         FontFamily = AppFont.Pick();
@@ -87,6 +90,11 @@ public partial class MainWindow : Window
                 Environment.ExitCode = 1;
                 Application.Current.Shutdown(1);
             }
+            return;
+        }
+        if (_probeDir is not null)
+        {
+            await RunProbe().ConfigureAwait(true);
             return;
         }
         if (Session.Demo) return;
@@ -452,6 +460,48 @@ public partial class MainWindow : Window
     {
         if (sender is FrameworkElement fe && fe.Tag is string id)
             Session.Select(id);
+    }
+
+    private void Remove_Click(object sender, RoutedEventArgs e)
+    {
+        var id = Session.SelectedAccountId;
+        if (string.IsNullOrEmpty(id))
+        {
+            ShowToast("先在上面点一个要移除的账号。");
+            return;
+        }
+        var record = Session.AccountsFile.Accounts.FirstOrDefault(a => a.Id == id);
+        if (record is null)
+        {
+            ShowToast("这个账号不在列表里。");
+            return;
+        }
+        _pendingRemoveId = id;
+        RemoveConfirmText.Text = AccountBook.ConfirmText(record);
+        RemoveConfirm.Visibility = Visibility.Visible;
+    }
+
+    private void CancelRemove_Click(object sender, RoutedEventArgs e)
+    {
+        _pendingRemoveId = null;
+        RemoveConfirm.Visibility = Visibility.Collapsed;
+    }
+
+    private void ConfirmRemove_Click(object sender, RoutedEventArgs e)
+    {
+        var id = _pendingRemoveId;
+        _pendingRemoveId = null;
+        RemoveConfirm.Visibility = Visibility.Collapsed;
+        if (string.IsNullOrEmpty(id)) return;
+        var record = Session.AccountsFile.Accounts.FirstOrDefault(a => a.Id == id);
+        if (!Session.Demo && record?.Platform == "douyin")
+            _douyin?.Release(id);
+        if (!Session.RemoveAccount(id, out var message))
+        {
+            ShowToast(message);
+            return;
+        }
+        ShowToast(message);
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e) => Session.OpenSettings();

@@ -26,7 +26,7 @@
             </StackPanel>
           </DockPanel>
           <DockPanel Margin="0,6">
-            <ComboBox DockPanel.Dock="Right" Width="110" SelectedIndex="0" SelectionChanged="Tone_Changed">
+            <ComboBox x:Name="ToneBox" DockPanel.Dock="Right" Width="110" SelectedIndex="0" SelectionChanged="Tone_Changed">
               <ComboBoxItem Content="温暖"/>
               <ComboBoxItem Content="谦和"/>
               <ComboBoxItem Content="幽默"/>
@@ -72,10 +72,10 @@
           </DockPanel>
           <TextBlock Text="AI 服务" Foreground="{StaticResource Gold}" FontWeight="SemiBold" Margin="0,12,0,6"/>
           <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-            <Button Content="DeepSeek" Tag="DeepSeek" Click="Preset_Click" Style="{StaticResource GhostBtn}" Margin="0,0,6,0"/>
-            <Button Content="智谱" Tag="智谱 GLM-4-Flash" Click="Preset_Click" Style="{StaticResource GhostBtn}" Margin="0,0,6,0"/>
-            <Button Content="通义" Tag="通义" Click="Preset_Click" Style="{StaticResource GhostBtn}" Margin="0,0,6,0"/>
-            <Button Content="Kimi" Tag="Kimi" Click="Preset_Click" Style="{StaticResource GhostBtn}"/>
+            <Button Content="DeepSeek" Tag="DeepSeek" Click="Preset_Click" Style="{StaticResource PresetPick}" Margin="0,0,6,0"/>
+            <Button Content="智谱" Tag="智谱 GLM-4-Flash" Click="Preset_Click" Style="{StaticResource PresetPick}" Margin="0,0,6,0"/>
+            <Button Content="通义" Tag="通义" Click="Preset_Click" Style="{StaticResource PresetPick}" Margin="0,0,6,0"/>
+            <Button Content="Kimi" Tag="Kimi" Click="Preset_Click" Style="{StaticResource PresetPick}"/>
           </StackPanel>
           <TextBlock Text="接口地址" Foreground="{StaticResource Ink3}" FontSize="11"/>
           <TextBox x:Name="BaseUrlBox" Text="{Binding Settings.BaseUrl, UpdateSourceTrigger=PropertyChanged}" Margin="0,2,0,6" LostFocus="Save_Changed"/>
@@ -84,7 +84,7 @@
           <TextBlock Text="API Key（只存在这台电脑，加密保存）" Foreground="{StaticResource Ink3}" FontSize="11"/>
           <DockPanel Margin="0,2,0,6">
             <Button DockPanel.Dock="Right" Content="测试" Style="{StaticResource GoldBtn}" Margin="8,0,0,0" Click="Test_Click" Width="72"/>
-            <PasswordBox x:Name="KeyBox" Height="32"/>
+            <PasswordBox x:Name="KeyBox" Height="32" PasswordChanged="Key_Changed"/>
           </DockPanel>
           <TextBlock Text="{Binding AiState}" Foreground="#FF8EEAB5" FontSize="12" Margin="0,0,0,8"/>
           <DockPanel Margin="0,4">
@@ -128,13 +128,13 @@
           <TextBlock Text="我的话术" FontSize="18" FontWeight="Bold" Foreground="{StaticResource Gold}"/>
           <TextBlock Text="写几个要点就行，AI 会自己说成好听的话" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,2,0,8"/>
           <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-            <Button Content="问候" Tag="问候" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
-            <Button Content="安慰" Tag="安慰" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
-            <Button Content="拒绝" Tag="拒绝" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
-            <Button Content="道歉" Tag="道歉" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
-            <Button Content="感谢" Tag="感谢" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
-            <Button Content="夸赞" Tag="夸赞" Click="Cat_Click" Style="{StaticResource GhostBtn}" Margin="0,0,4,0"/>
-            <Button Content="谈生意" Tag="谈生意" Click="Cat_Click" Style="{StaticResource GhostBtn}"/>
+            <Button Content="问候" Tag="问候" Click="Cat_Click" Style="{StaticResource CatPick}" Margin="0,0,4,0"/>
+            <Button Content="安慰" Tag="安慰" Click="Cat_Click" Style="{StaticResource CatPick}" Margin="0,0,4,0"/>
+            <Button Content="拒绝" Tag="拒绝" Click="Cat_Click" Style="{StaticResource CatPick}" Margin="0,0,4,0"/>
+            <Button Content="道歉" Tag="道歉" Click="Cat_Click" Style="{StaticResource CatPick}" Margin="0,0,4,0"/>
+            <Button Content="感谢" Tag="感谢" Click="Cat_Click" Style="{StaticResource CatPick}" Margin="0,0,4,0"/>
+            <Button Content="夸赞" Tag="夸赞" Click="Cat_Click" Style="{StaticResource CatPick}" Margin="0,0,4,0"/>
+            <Button Content="谈生意" Tag="谈生意" Click="Cat_Click" Style="{StaticResource CatPick}"/>
           </StackPanel>
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">

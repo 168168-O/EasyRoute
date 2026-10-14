@@ -19,21 +19,6 @@ public sealed class PersistedSettings
     public string PresetName { get; set; } = "DeepSeek";
 }
 
-public sealed class AccountRecord
-{
-    public string Id { get; set; } = "";
-    public string Platform { get; set; } = "";
-    public string Name { get; set; } = "";
-    public string Sub { get; set; } = "";
-    public string Brand { get; set; } = "Edge";
-}
-
-public sealed class AccountFile
-{
-    public bool FirstRunDone { get; set; }
-    public List<AccountRecord> Accounts { get; set; } = [];
-}
-
 public static class AppPaths
 {
     public static string Root => Path.Combine(
@@ -72,24 +57,9 @@ public static class LocalStore
         File.WriteAllText(AppPaths.SettingsFile, JsonSerializer.Serialize(settings, Opts));
     }
 
-    public static AccountFile LoadAccounts()
-    {
-        try
-        {
-            if (!File.Exists(AppPaths.AccountFile)) return new AccountFile();
-            return JsonSerializer.Deserialize<AccountFile>(File.ReadAllText(AppPaths.AccountFile), Opts) ?? new AccountFile();
-        }
-        catch
-        {
-            return new AccountFile();
-        }
-    }
+    public static AccountFile LoadAccounts() => AccountBook.Load(AppPaths.AccountFile);
 
-    public static void SaveAccounts(AccountFile file)
-    {
-        AppPaths.Ensure();
-        File.WriteAllText(AppPaths.AccountFile, JsonSerializer.Serialize(file, Opts));
-    }
+    public static void SaveAccounts(AccountFile file) => AccountBook.Save(AppPaths.AccountFile, file);
 
     public static ToneMemory LoadTones()
     {

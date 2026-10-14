@@ -43,13 +43,13 @@
         </Grid.ColumnDefinitions>
         <StackPanel>
           <TextBlock Text="① 选平台" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,0,0,8"/>
-          <Button Click="PickWechat_Click" HorizontalContentAlignment="Left" Margin="0,0,0,8" Padding="12" Style="{StaticResource GhostBtn}">
+          <Button Tag="wechat" Click="PickWechat_Click" HorizontalContentAlignment="Left" Margin="0,0,0,8" Padding="12" Style="{StaticResource PlatformPick}">
             <StackPanel>
               <TextBlock Text="微信" FontSize="17" Foreground="{StaticResource Ink}"/>
               <TextBlock Text="把电脑上已登录的微信放进来（不改动微信）" Foreground="{StaticResource Ink3}" FontSize="12" TextWrapping="Wrap"/>
             </StackPanel>
           </Button>
-          <Button Click="PickDouyin_Click" HorizontalContentAlignment="Left" Margin="0,0,0,12" Padding="12" Style="{StaticResource GhostBtn}">
+          <Button Tag="douyin" Click="PickDouyin_Click" HorizontalContentAlignment="Left" Margin="0,0,0,12" Padding="12" Style="{StaticResource PlatformPick}">
             <StackPanel>
               <TextBlock Text="抖音" FontSize="17" Foreground="{StaticResource Ink}"/>
               <TextBlock Text="扫码登录，可加好几个号。douyin.com 国内版" Foreground="{StaticResource Ink3}" FontSize="12" TextWrapping="Wrap"/>
@@ -57,12 +57,12 @@
           </Button>
           <TextBlock Text="浏览器身份（选好后固定不变）" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,0,0,8"/>
           <UniformGrid Columns="3">
-            <Button Content="自动" Tag="Auto" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
-            <Button Content="Edge" Tag="Edge" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
-            <Button Content="Chrome" Tag="Chrome" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
-            <Button Content="360" Tag="360" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
-            <Button Content="QQ 高级" Tag="QQ" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
-            <Button Content="搜狗 高级" Tag="Sogou" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource ChipBtn}"/>
+            <Button Content="自动" Tag="Auto" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource BrandPick}"/>
+            <Button Content="Edge" Tag="Edge" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource BrandPick}"/>
+            <Button Content="Chrome" Tag="Chrome" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource BrandPick}"/>
+            <Button Content="360" Tag="360" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource BrandPick}"/>
+            <Button Content="QQ 高级" Tag="QQ" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource BrandPick}"/>
+            <Button Content="搜狗 高级" Tag="Sogou" Click="Brand_Click" Margin="2" Height="34" Style="{StaticResource BrandPick}"/>
           </UniformGrid>
           <TextBlock Text="{Binding WizardNote}" Foreground="{StaticResource Ink3}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
           <TextBlock Text="{Binding WizardWarn}" Foreground="#FFE7C07A" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
@@ -82,9 +82,9 @@
           <TextBlock Text="③ 给这个号起个名字" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,0,0,8"/>
           <TextBox Text="{Binding WizardName, UpdateSourceTrigger=PropertyChanged}" FontSize="17" Height="48" Padding="12,8"/>
           <StackPanel Orientation="Horizontal" Margin="0,8,0,12">
-            <Button Content="主号" Tag="主号" Click="Name_Click" Style="{StaticResource GhostBtn}" Margin="0,0,6,0"/>
-            <Button Content="小号" Tag="小号" Click="Name_Click" Style="{StaticResource GhostBtn}" Margin="0,0,6,0"/>
-            <Button Content="店铺号" Tag="店铺号" Click="Name_Click" Style="{StaticResource GhostBtn}"/>
+            <Button Content="主号" Tag="主号" Click="Name_Click" Style="{StaticResource NamePick}" Margin="0,0,6,0"/>
+            <Button Content="小号" Tag="小号" Click="Name_Click" Style="{StaticResource NamePick}" Margin="0,0,6,0"/>
+            <Button Content="店铺号" Tag="店铺号" Click="Name_Click" Style="{StaticResource NamePick}"/>
           </StackPanel>
           <Border CornerRadius="12" BorderBrush="#4DA9DCFF" BorderThickness="1" Padding="12" Background="#146FB8F0">
             <StackPanel>
@@ -102,7 +102,7 @@
       </Grid>
       <DockPanel Grid.Row="3" Margin="0,12,0,0">
         <Button DockPanel.Dock="Right" Content="完成" Style="{StaticResource GoldBtn}" Width="180" Height="48" FontSize="17" Click="Finish_Click" Margin="10,0,0,0"/>
-        <Button DockPanel.Dock="Right" Content="上一步" Style="{StaticResource GhostBtn}" Width="140" Height="48" FontSize="16" Click="Back_Click"/>
+        <Button DockPanel.Dock="Right" Content="上一步" Style="{StaticResource GhostBtn}" Width="140" Height="48" FontSize="16" Click="Back_Click" IsEnabled="{Binding CanGoBack}" ToolTip="返回刚才的账号"/>
         <StackPanel VerticalAlignment="Center">
           <TextBlock Text="{Binding Promise}" Foreground="{StaticResource Gold}" FontSize="12" TextWrapping="Wrap"/>
           <TextBlock Text="扫不出来？把手机亮度调高，或在抖音页面里刷新二维码。" Foreground="{StaticResource Ink3}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"/>

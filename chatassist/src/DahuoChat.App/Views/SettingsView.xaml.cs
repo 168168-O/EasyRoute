@@ -17,6 +17,8 @@ public partial class SettingsView
     {
         if (_ready || DataContext is not Session s) return;
         KeyBox.Password = s.Demo ? "" : s.ApiKey;
+        var toneIndex = Array.IndexOf(Tones.All, ToneMemory.Normalize(s.Settings.DefaultTone));
+        ToneBox.SelectedIndex = toneIndex < 0 ? 0 : toneIndex;
         CountBox.SelectedIndex = Math.Clamp(s.Settings.SuggestionCount, 3, 5) - 3;
         EmbedBox.SelectedIndex = s.Settings.EmbedMode == "dock" ? 1 : 0;
         FillBox.SelectedIndex = s.Settings.FillMode == "copy" ? 1 : 0;
@@ -28,6 +30,16 @@ public partial class SettingsView
     private void Save_Changed(object sender, System.Windows.RoutedEventArgs e)
     {
         if (!_ready || S is null) return;
+        if (!S.Demo) S.ApiKey = KeyBox.Password;
+        S.SaveSettingsFromUi();
+        Saved?.Invoke();
+    }
+
+    private void Key_Changed(object sender, System.Windows.RoutedEventArgs e) => FlushKey();
+
+    private void FlushKey()
+    {
+        if (!_ready || S is null || S.Demo) return;
         S.ApiKey = KeyBox.Password;
         S.SaveSettingsFromUi();
         Saved?.Invoke();
@@ -90,7 +102,11 @@ public partial class SettingsView
     private void Add_Click(object sender, System.Windows.RoutedEventArgs e)
     {
         if (S is null) return;
-        S.AddScript(S.ScriptCategory, NewTitle.Text, "", NewPoints.Text, "");
+        if (!S.AddScript(S.ScriptCategory, NewTitle.Text, "", NewPoints.Text, ""))
+        {
+            S.Tell("先写上标题，再点加一条。");
+            return;
+        }
         NewTitle.Text = "";
         NewPoints.Text = "";
     }
@@ -111,7 +127,11 @@ public partial class SettingsView
         System.IO.File.WriteAllText(dlg.FileName, S.ExportCsv());
     }
 
-    private void Back_Click(object sender, System.Windows.RoutedEventArgs e) => S?.CloseOverlay();
+    private void Back_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        FlushKey();
+        S?.CloseOverlay();
+    }
 
     public event System.Action<string>? EmbedChanged;
     public event System.Action? Saved;

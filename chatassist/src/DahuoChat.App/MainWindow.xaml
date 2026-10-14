@@ -89,13 +89,19 @@
         <Border Grid.Column="0" Background="#F0080C14" BorderBrush="#22E9D3A0" BorderThickness="0,0,1,0">
           <DockPanel>
             <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,8">
-              <Button Style="{StaticResource BareBtn}" Click="Settings_Click" Margin="0,4" ToolTip="话术库">
+              <Button x:Name="RemoveAccountButton" Style="{StaticResource BareBtn}" Click="Remove_Click" Margin="0,4" ToolTip="移除当前账号" AutomationProperties.Name="移除账号">
+                <StackPanel>
+                  <TextBlock Text="减" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource Gold}"/>
+                  <TextBlock Text="移除" FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource Ink3}"/>
+                </StackPanel>
+              </Button>
+              <Button x:Name="ScriptsButton" Style="{StaticResource BareBtn}" Click="Settings_Click" Margin="0,4" ToolTip="话术库">
                 <StackPanel>
                   <TextBlock Text="库" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource Gold}"/>
                   <TextBlock Text="话术" FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource Ink3}"/>
                 </StackPanel>
               </Button>
-              <Button Style="{StaticResource BareBtn}" Click="Settings_Click" Margin="0,4" ToolTip="设置">
+              <Button x:Name="SettingsButton" Style="{StaticResource BareBtn}" Click="Settings_Click" Margin="0,4" ToolTip="设置">
                 <StackPanel>
                   <TextBlock Text="设" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{StaticResource Ice}"/>
                   <TextBlock Text="设置" FontSize="10" HorizontalAlignment="Center" Foreground="{StaticResource Ink3}"/>
@@ -209,6 +215,18 @@
         <local:SettingsView x:Name="SettingsPage" Grid.Column="1" Grid.ColumnSpan="2" Visibility="{Binding ShowSettings, Converter={StaticResource BoolVis}}"/>
       </Grid>
     </Grid>
+    <Border x:Name="RemoveConfirm" Visibility="Collapsed" Background="#C006090F" Panel.ZIndex="20">
+      <Border Width="420" VerticalAlignment="Center" HorizontalAlignment="Center" CornerRadius="16" BorderBrush="#99E9D3A0" BorderThickness="1" Padding="22" Background="#F01A2232">
+        <StackPanel>
+          <TextBlock Text="移除账号" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource Gold}"/>
+          <TextBlock x:Name="RemoveConfirmText" TextWrapping="Wrap" Margin="0,10,0,16" Foreground="{StaticResource Ink}" FontSize="14"/>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="CancelRemoveButton" Content="取消" Style="{StaticResource GhostBtn}" Width="96" Height="36" Margin="0,0,8,0" Click="CancelRemove_Click"/>
+            <Button x:Name="ConfirmRemoveButton" Content="确定移除" Style="{StaticResource GoldBtn}" Width="120" Height="36" Click="ConfirmRemove_Click"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
     <Border x:Name="ToastBar" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,22" Visibility="Collapsed" CornerRadius="10" Background="#F2E9D3A0" Padding="16,8" Panel.ZIndex="8" IsHitTestVisible="False">
       <TextBlock x:Name="ToastText" Foreground="#FF2A1F0C" FontSize="13"/>
     </Border>

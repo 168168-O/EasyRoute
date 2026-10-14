@@ -16,6 +16,7 @@ public partial class WizardView
     {
         if (S is null) return;
         S.WizardPlatform = "douyin";
+        if (S.WizardName == "海外号") S.WizardName = "店铺号";
     }
 
     private void Brand_Click(object sender, System.Windows.RoutedEventArgs e)
@@ -30,7 +31,16 @@ public partial class WizardView
         S.WizardName = fe.Tag as string ?? "";
     }
 
-    private void Back_Click(object sender, System.Windows.RoutedEventArgs e) => S?.CloseOverlay();
+    private void Back_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (S is null) return;
+        if (!S.CanGoBack)
+        {
+            S.Tell("还没有账号，先点完成。");
+            return;
+        }
+        S.CloseOverlay();
+    }
 
     private void Finish_Click(object sender, System.Windows.RoutedEventArgs e)
     {

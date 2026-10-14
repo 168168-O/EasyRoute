@@ -163,6 +163,15 @@ public sealed class DouyinHost
         return id is "China Standard Time" or "Asia/Shanghai" or "中国标准时间";
     }
 
+    public void Release(string id)
+    {
+        if (ActiveId == id) ActiveId = null;
+        _awake.Remove(id);
+        if (!_tabs.Remove(id, out var tab)) return;
+        try { _mount.Children.Remove(tab.View); } catch { /* already detached */ }
+        try { tab.View.Dispose(); } catch { /* host already closed */ }
+    }
+
     public bool IsAsleep(string id) => _tabs.ContainsKey(id) && !_awake.Contains(id);
     public IEnumerable<string> AsleepIds => _tabs.Keys.Where(id => !_awake.Contains(id));
     public IEnumerable<string> AwakeIds => _awake.ToArray();
