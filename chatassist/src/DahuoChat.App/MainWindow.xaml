@@ -168,7 +168,7 @@
               <Button x:Name="RemoveAccountButton" Style="{StaticResource BareBtn}" Click="Remove_Click" Margin="0,0,0,8" ToolTip="移除当前账号" AutomationProperties.Name="移除账号">
                 <Grid Width="56" Height="58">
                   <Border Width="44" Height="44" CornerRadius="14" VerticalAlignment="Top" HorizontalAlignment="Center" Background="#FF1A2230" BorderBrush="#22FFFFFF" BorderThickness="1">
-                    <TextBlock Text="减" Foreground="White" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <TextBlock Text="-" Foreground="White" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                   </Border>
                   <TextBlock Text="移除" FontSize="10" Foreground="{StaticResource Ink3}" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
                 </Grid>
