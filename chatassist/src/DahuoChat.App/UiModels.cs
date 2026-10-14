@@ -61,6 +61,18 @@ public sealed class ReplyVm
     public Brush TagFg { get; init; } = Brushes.White;
 }
 
+public sealed class TagEqualsConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values is null || values.Length < 2 || values[0] is null || values[1] is null) return false;
+        return string.Equals(values[0].ToString(), values[1].ToString(), StringComparison.Ordinal);
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 public sealed class BoolVisConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

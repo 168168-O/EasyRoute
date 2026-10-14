@@ -49,6 +49,7 @@ public sealed class Session : NotifyBase
     private string _wizardWarn = "";
     private string _launchHint = "";
     private bool _wechatMissing;
+    private string? _returnId;
     private string _envLine = "独立环境 · 抖音 1    浏览器 Edge（固定）    北京时间    国内直连";
 
     public Session(bool demo)
@@ -122,7 +123,11 @@ public sealed class Session : NotifyBase
     public bool HasMore => _all.Count > Settings.SuggestionCount;
     public bool ShowReplyTools => _all.Count > 0;
     public bool LiveWechat => !Demo && ShowWechat;
+    public bool CanGoBack => AccountsFile.Accounts.Count > 0;
+    public string? SelectedAccountId => Accounts.FirstOrDefault(a => a.Selected && !a.IsAdd)?.Id;
     public string Promise => "只给建议，永远由你自己按发送；没有群发，没有自动回复";
+
+    public void Tell(string text) => Toast?.Invoke(text);
 
     public event Action<string, bool>? Deliver;
     public event Action? AccountsChanged;
@@ -206,6 +211,7 @@ public sealed class Session : NotifyBase
 
     public void OpenWizard()
     {
+        RememberReturn();
         Screen = ScreenKind.Wizard;
         TitleAccount = "添加账号";
         TitleState = AccountsFile.FirstRunDone ? "添加账号" : "首次使用引导";
@@ -216,6 +222,7 @@ public sealed class Session : NotifyBase
 
     public void OpenSettings()
     {
+        RememberReturn();
         Screen = ScreenKind.Settings;
         TitleAccount = "设置 · 话术";
         TitleState = "自动保存";
@@ -225,9 +232,30 @@ public sealed class Session : NotifyBase
 
     public void CloseOverlay()
     {
+        if (!string.IsNullOrEmpty(_returnId) && AccountsFile.Accounts.Any(a => a.Id == _returnId))
+        {
+            var id = _returnId;
+            _returnId = null;
+            Select(id);
+            return;
+        }
+        _returnId = null;
         var first = AccountsFile.Accounts.FirstOrDefault();
         if (first is null) OpenWizard();
         else Select(first.Id);
+    }
+
+    public bool RemoveAccount(string id, out string message)
+    {
+        var result = AccountBook.Remove(AccountsFile, id);
+        message = result.Message;
+        if (!result.Ok) return false;
+        if (_persist && result.Removed is { Platform: "douyin" } removed && !DeleteDouyinProfile(removed))
+            message += " 登录文件夹正在使用，列表已经去掉。";
+        PersistAccounts();
+        if (result.NextId is null) OpenWizard();
+        else Select(result.NextId);
+        return true;
     }
 
     public void SetTone(string tone)
@@ -260,9 +288,9 @@ public sealed class Session : NotifyBase
         Toast?.Invoke("已把要点放进「我想表达」");
     }
 
-    public void AddScript(string category, string title, string triggers, string points, string avoid)
+    public bool AddScript(string category, string title, string triggers, string points, string avoid)
     {
-        if (string.IsNullOrWhiteSpace(title)) return;
+        if (string.IsNullOrWhiteSpace(title)) return false;
         Scripts.Items.Add(new ScriptItem
         {
             Category = ScriptCategories.All.Contains(category) ? category : "问候",
@@ -274,6 +302,7 @@ public sealed class Session : NotifyBase
         ScriptCategory = category;
         if (_persist) LocalStore.SaveScripts(Scripts);
         RefreshScripts();
+        return true;
     }
 
     public void ImportCsv(string csv)
@@ -369,9 +398,8 @@ public sealed class Session : NotifyBase
     {
         if (Demo)
         {
-            if (adjust == SuggestAdjust.Polish) ShowReplies(PolishSample(), 0);
-            else if (adjust == SuggestAdjust.Shorter) ShowReplies(ShortSample(), 0);
-            else ShowReplies(WechatSample(), adjust == SuggestAdjust.AnotherBatch ? 1 : 0);
+            var best = adjust == SuggestAdjust.AnotherBatch ? 1 : 0;
+            ShowReplies(DemoSuggestions.Pick(adjust), best);
             Status = "演示数据 · 真机接上钥匙后会按对方的话现写";
             return;
         }
@@ -572,6 +600,25 @@ public sealed class Session : NotifyBase
         RebuildAccounts();
         if (_persist) LocalStore.SaveAccounts(AccountsFile);
         AccountsChanged?.Invoke();
+        Raise(nameof(CanGoBack));
+    }
+
+    private void RememberReturn()
+    {
+        var id = Accounts.FirstOrDefault(a => a.Selected && !a.IsAdd)?.Id;
+        if (!string.IsNullOrEmpty(id)) _returnId = id;
+    }
+
+    private bool DeleteDouyinProfile(AccountRecord record)
+    {
+        if (record.Platform != "douyin") return true;
+        if (string.IsNullOrWhiteSpace(record.Id) || record.Id.IndexOfAny(['/', '\\', '.', ':']) >= 0) return false;
+        var full = Path.GetFullPath(AppPaths.DouyinRoot(record.Id));
+        var root = Path.GetFullPath(AppPaths.Root);
+        var prefix = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
+        if (!full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
+        var deleted = AccountBook.TryDeleteDirectory(full);
+        return deleted || !Directory.Exists(full);
     }
 
     private void RememberTone()
@@ -626,7 +673,7 @@ public sealed class Session : NotifyBase
         ExtraChip = "新消息自动出建议";
         PolishMode = false;
         DrawerOpen = false;
-        ShowReplies(WechatSample(), 0);
+        ShowReplies(DemoSuggestions.Wechat(), 0);
         Tones.Set("微信", "阿杰", "温暖");
         MarkSelected("wechat");
     }
@@ -638,7 +685,7 @@ public sealed class Session : NotifyBase
         _contact = "林小雨";
         PolishMode = true;
         Draft = "在深圳 瞎混呗 你呢";
-        ShowReplies(PolishSample(), 0);
+        ShowReplies(DemoSuggestions.Polish(), 0);
         Emotion = "惊喜热络 · 想叙旧";
         Quote = "天哪是你吗！好久不见！刷到你的视频了，你现在在哪发展呀？";
         ContactLine = "林小雨 · 老同学 · 刚刚";
@@ -652,29 +699,6 @@ public sealed class Session : NotifyBase
         MarkSelected("dy1");
         RaiseChrome();
     }
-
-    private static List<ReplyItem> WechatSample() =>
-    [
-        new() { Tag = "温暖体贴", Text = "太替你高兴了！可惜周六要陪孩子去医院复查，下周我单独上门给你暖房～", Why = "先接住他的喜悦，再给真实原因和补偿" },
-        new() { Tag = "幽默化解", Text = "你下厨我必须到场品鉴！可周六得陪娃复查😭 下周我带酒来补作业", Why = "玩笑冲淡拒绝，他不会觉得被冷落" },
-        new() { Tag = "委婉拒绝", Text = "这么重要的日子真不想错过，周六得陪孩子复查，替我跟老王他们说声抱歉", Why = "先表重视再说原因，拒绝不伤人" },
-        new() { Tag = "真诚夸赞", Text = "看照片就知道装得特别用心！周六实在走不开，下周一定来参观学习", Why = "夸具体的用心，他的辛苦被看见" },
-        new() { Tag = "轻松简短", Text = "恭喜乔迁！周六陪娃复查去不了，下周请你吃饭补上", Why = "跟他的轻快语气一致，不拖沓" }
-    ];
-
-    private static List<ReplyItem> ShortSample() =>
-    [
-        new() { Tag = "轻松简短", Text = "恭喜乔迁！周六陪娃复查去不了，下周请你吃饭", Why = "短，但原因和补偿都在" },
-        new() { Tag = "温暖体贴", Text = "太为你高兴了，周六得陪娃复查，下周上门暖房", Why = "先高兴，再把事说清" },
-        new() { Tag = "委婉拒绝", Text = "这日子真不想错过，周六走不开，替我和老王说声抱歉", Why = "拒绝清楚，也不扫兴" }
-    ];
-
-    private static List<ReplyItem> PolishSample() =>
-    [
-        new() { Tag = "谦和", Text = "好久不见呀！我在深圳这边，还在慢慢打拼。你现在在哪儿发展？", Why = "“瞎混”换成“打拼”，更体面" },
-        new() { Tag = "温暖", Text = "真的是我😄 好久不见！我在深圳，你呢？最近都还好吧", Why = "先回应她的惊喜，再关心她" },
-        new() { Tag = "幽默", Text = "被你抓到了😂 在深圳搬砖呢，你在哪？有空来深圳我请你吃饭", Why = "自嘲拉近距离，还顺手约了饭" }
-    ];
 
     private static AccountFile DemoAccounts() => new()
     {

@@ -19,11 +19,12 @@ public partial class App : Application
         SessionEnding += (_, _) => WeChatEmbedder.RestoreAll();
 
         var shots = ArgValue(e.Args, "--shots");
-        var demo = shots is not null || e.Args.Any(a => a == "--demo");
+        var probe = ArgValue(e.Args, "--probe");
+        var demo = shots is not null || probe is not null || e.Args.Any(a => a == "--demo");
         if (demo)
             RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
 
-        var window = new MainWindow(new Session(demo), shots);
+        var window = new MainWindow(new Session(demo), shots, probe);
         MainWindow = window;
         window.Show();
     }

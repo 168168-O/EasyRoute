@@ -71,6 +71,23 @@ jobs:
       - name: 打包
         run: dotnet publish chatassist/src/DahuoChat.App/DahuoChat.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o chatassist/publish
 
+      - name: 按钮探针
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $out = "chatassist/probe"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          $exe = "chatassist/publish/dahuo-chat.exe"
+          if (-not (Test-Path $exe)) { throw "没有 dahuo-chat.exe" }
+          $p = Start-Process -FilePath (Resolve-Path $exe) -ArgumentList @("--probe", (Resolve-Path $out).Path) -PassThru -WindowStyle Normal
+          if (-not $p.WaitForExit(120000)) {
+            try { $p.Kill() } catch {}
+            throw "按钮探针超时"
+          }
+          $log = Join-Path $out "probe.txt"
+          if (Test-Path $log) { Get-Content $log | Write-Host }
+          if ($p.ExitCode -ne 0) { throw "按钮探针失败，退出码 $($p.ExitCode)" }
+
       - name: 中文字体
         shell: pwsh
         run: |

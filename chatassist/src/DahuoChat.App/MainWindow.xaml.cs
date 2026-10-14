@@ -11,6 +11,8 @@ namespace DahuoChat;
 public partial class MainWindow : Window
 {
     private readonly string? _shotDir;
+    private readonly string? _probeDir;
+    private string? _pendingRemoveId;
     private readonly List<int> _hotIds = [];
     private DouyinHost? _douyin;
     private bool _dyWired;
@@ -31,10 +33,11 @@ public partial class MainWindow : Window
 
     public Session Session { get; }
 
-    public MainWindow(Session session, string? shotDir)
+    public MainWindow(Session session, string? shotDir, string? probeDir = null)
     {
         Session = session;
         _shotDir = shotDir;
+        _probeDir = probeDir;
         InitializeComponent();
         DataContext = session;
         FontFamily = AppFont.Pick();
@@ -87,6 +90,11 @@ public partial class MainWindow : Window
                 Environment.ExitCode = 1;
                 Application.Current.Shutdown(1);
             }
+            return;
+        }
+        if (_probeDir is not null)
+        {
+            await RunProbe().ConfigureAwait(true);
             return;
         }
         if (Session.Demo) return;
@@ -454,6 +462,48 @@ public partial class MainWindow : Window
             Session.Select(id);
     }
 
+    private void Remove_Click(object sender, RoutedEventArgs e)
+    {
+        var id = Session.SelectedAccountId;
+        if (string.IsNullOrEmpty(id))
+        {
+            ShowToast("先在上面点一个要移除的账号。");
+            return;
+        }
+        var record = Session.AccountsFile.Accounts.FirstOrDefault(a => a.Id == id);
+        if (record is null)
+        {
+            ShowToast("这个账号不在列表里。");
+            return;
+        }
+        _pendingRemoveId = id;
+        RemoveConfirmText.Text = AccountBook.ConfirmText(record);
+        RemoveConfirm.Visibility = Visibility.Visible;
+    }
+
+    private void CancelRemove_Click(object sender, RoutedEventArgs e)
+    {
+        _pendingRemoveId = null;
+        RemoveConfirm.Visibility = Visibility.Collapsed;
+    }
+
+    private void ConfirmRemove_Click(object sender, RoutedEventArgs e)
+    {
+        var id = _pendingRemoveId;
+        _pendingRemoveId = null;
+        RemoveConfirm.Visibility = Visibility.Collapsed;
+        if (string.IsNullOrEmpty(id)) return;
+        var record = Session.AccountsFile.Accounts.FirstOrDefault(a => a.Id == id);
+        if (!Session.Demo && record?.Platform == "douyin")
+            _douyin?.Release(id);
+        if (!Session.RemoveAccount(id, out var message))
+        {
+            ShowToast(message);
+            return;
+        }
+        ShowToast(message);
+    }
+
     private void Settings_Click(object sender, RoutedEventArgs e) => Session.OpenSettings();
     private void Reopen_Click(object sender, RoutedEventArgs e) => Session.PanelOpen = true;
     private void Min_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
@@ -511,7 +561,30 @@ public partial class MainWindow : Window
                 encoder.Save(stream);
             if (new FileInfo(path).Length < 8000)
                 throw new InvalidOperationException("画面太小：" + file);
+            if (name == "wechat")
+                SaveSidebarCrop(bmp);
         }
+    }
+
+    private void SaveSidebarCrop(RenderTargetBitmap bmp)
+    {
+        var rail = Math.Max(1, (int)Math.Round(RailCol.ActualWidth));
+        rail = Math.Min(rail, bmp.PixelWidth);
+        var height = bmp.PixelHeight;
+        var stride = rail * 4;
+        var pixels = new byte[stride * height];
+        bmp.CopyPixels(new Int32Rect(0, 0, rail, height), pixels, stride, 0);
+        var source = BitmapSource.Create(rail, height, 96, 96, PixelFormats.Pbgra32, null, pixels, stride);
+        var scale = new ScaleTransform(4, 4);
+        scale.Freeze();
+        var scaled = new TransformedBitmap(source, scale);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(scaled));
+        var path = Path.Combine(_shotDir!, "06-sidebar.png");
+        using (var stream = File.Create(path))
+            encoder.Save(stream);
+        if (new FileInfo(path).Length < 2000)
+            throw new InvalidOperationException("侧栏画面太小");
     }
 
     private static string FriendlyWeb(string message)
